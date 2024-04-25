@@ -1,4 +1,4 @@
-package com.pl03.kanban.models;
+package com.pl03.kanban.entities;
 
 import jakarta.persistence.*;
 import lombok.Data;
