@@ -5,13 +5,13 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class AllTaskDto {
+public class GetAllTaskDto {
     private int id;
     private String taskTitle;
     private String taskAssignees;
     private String taskStatus;
 
-    public AllTaskDto(int id, String taskTitle, String taskAssignees, String taskStatus) {
+    public GetAllTaskDto(int id, String taskTitle, String taskAssignees, String taskStatus) {
         this.id = id;
         this.taskTitle = taskTitle;
         this.taskAssignees = taskAssignees;
