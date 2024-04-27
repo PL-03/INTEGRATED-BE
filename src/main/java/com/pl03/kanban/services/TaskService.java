@@ -1,11 +1,12 @@
 package com.pl03.kanban.services;
 
 import com.pl03.kanban.dtos.GetAllTaskDto;
-import com.pl03.kanban.dtos.GetTaskDto;
 import com.pl03.kanban.entities.Task;
 import com.pl03.kanban.repositories.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -24,12 +25,13 @@ public class TaskService {
         return taskRepository.findAllTasks();
     }
 
-    public GetTaskDto getTaskById(int id) {
+    public Task getTaskById(int id) {
         Task task = taskRepository.findTaskById(id);
-        if (task != null) {
-            return new GetTaskDto(task.getId(), task.getTaskTitle(), task.getTaskDescription(), task.getTaskAssignees(), task.getTaskStatus(), task.getCreatedOn(), task.getUpdatedOn());
+        if (task == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Task with id " + id + " does not exist");
         }
-        return null;  // auto send 404 if return null
+        return task;
     }
 
 }

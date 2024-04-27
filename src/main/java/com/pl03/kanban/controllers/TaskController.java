@@ -1,7 +1,7 @@
 package com.pl03.kanban.controllers;
 
 import com.pl03.kanban.dtos.GetAllTaskDto;
-import com.pl03.kanban.dtos.GetTaskDto;
+import com.pl03.kanban.entities.Task;
 import com.pl03.kanban.services.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -32,8 +32,8 @@ public class TaskController {
     }
 
     @GetMapping("/tasks/{id}")
-    public ResponseEntity<GetTaskDto> taskDetail(@PathVariable int id) {
-        GetTaskDto task = taskService.getTaskById(id);
+    public ResponseEntity<Task> taskDetail(@PathVariable int id) {
+        Task task = taskService.getTaskById(id);
         if (task == null) {
             return ResponseEntity.notFound().build();
         }
