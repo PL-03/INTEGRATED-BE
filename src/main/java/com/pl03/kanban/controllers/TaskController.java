@@ -1,16 +1,13 @@
 package com.pl03.kanban.controllers;
 
+import com.pl03.kanban.dtos.AddTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.entities.Task;
 import com.pl03.kanban.services.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -38,5 +35,21 @@ public class TaskController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(task);
+    }
+
+    @PostMapping("/tasks")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AddTaskDto addTask(@RequestBody AddTaskDto addTaskDto) {
+        Task task = new Task();
+        task.setTitle(addTaskDto.getTitle());
+        task.setDescription(addTaskDto.getDescription());
+        task.setAssignees(addTaskDto.getAssignees());
+        task.setStatus(addTaskDto.getStatus() != null ? Task.TaskStatus.valueOf(addTaskDto.getStatus()) : Task.TaskStatus.NO_STATUS);
+        Task savedTask = taskService.addTask(task);
+
+        addTaskDto.setId(savedTask.getId());
+        addTaskDto.setStatus(savedTask.getStatus().name());
+
+        return addTaskDto;
     }
 }

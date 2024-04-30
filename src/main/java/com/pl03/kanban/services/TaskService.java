@@ -20,11 +20,12 @@ public class TaskService {
         this.taskRepository = taskRepository;
     }
 
-
+    //list all tasks
     public List<GetAllTaskDto> getAllTasks() {
         return taskRepository.findAllTasks();
     }
 
+    //list task by id
     public Task getTaskById(int id) {
         Task task = taskRepository.findTaskById(id);
         if (task == null) {
@@ -32,6 +33,10 @@ public class TaskService {
                     "Task with id " + id + " does not exist");
         }
         return task;
+    }
+
+    public Task addTask(Task task) {
+        return taskRepository.save(task);
     }
 
 }

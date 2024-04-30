@@ -24,11 +24,16 @@ public class Task {
     private String assignees;
 
     @Column(name = "taskStatus", nullable = false)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private TaskStatus status;
 
-    @Column(name = "createdOn", nullable = false, updatable = false)
+    @Column(name = "createdOn", nullable = false, updatable = false, insertable = false)
     private Timestamp createdOn;
 
-    @Column(name = "updatedOn", nullable = false)
+    @Column(name = "updatedOn", nullable = false, insertable = false)
     private Timestamp updatedOn;
+
+    public enum TaskStatus {
+        NO_STATUS, TO_DO, DOING, DONE
+    }
 }
