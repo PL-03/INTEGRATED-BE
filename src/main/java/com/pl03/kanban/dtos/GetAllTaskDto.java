@@ -7,14 +7,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class GetAllTaskDto {
     private int id;
-    private String taskTitle;
-    private String taskAssignees;
-    private String taskStatus;
+    private String title;
+    private String assignees;
+    private String status;
 
-    public GetAllTaskDto(int id, String taskTitle, String taskAssignees, String taskStatus) {
+    public GetAllTaskDto(int id, String title, String assignees, String status) {
         this.id = id;
-        this.taskTitle = taskTitle;
-        this.taskAssignees = taskAssignees;
-        this.taskStatus = taskStatus;
+        this.title = title;
+        this.assignees = assignees;
+        this.status = status;
     }
 }

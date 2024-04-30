@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Integer> {
 
-    @Query("SELECT new com.pl03.kanban.dtos.GetAllTaskDto(t.id, t.taskTitle, t.taskAssignees, t.taskStatus) FROM Task t")
+    @Query("SELECT new com.pl03.kanban.dtos.GetAllTaskDto(t.id, t.title, t.assignees, t.status) FROM Task t")
     List<GetAllTaskDto> findAllTasks();
 
     Task findTaskById(int id);

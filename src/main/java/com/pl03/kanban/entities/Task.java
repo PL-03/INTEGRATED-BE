@@ -15,16 +15,16 @@ public class Task {
     private int id;
 
     @Column(name = "taskTitle", nullable = false, length = 100)
-    private String taskTitle;
+    private String title;
 
     @Column(name = "taskDescription", length = 500)
-    private String taskDescription;
+    private String description;
 
     @Column(name = "taskAssignees", length = 30)
-    private String taskAssignees;
+    private String assignees;
 
     @Column(name = "taskStatus", nullable = false)
-    private String taskStatus;
+    private String status;
 
     @Column(name = "createdOn", nullable = false, updatable = false)
     private Timestamp createdOn;

@@ -7,9 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-//@GetMapping("/v1/task")
 @SpringBootApplication
-@CrossOrigin (origins = "http://localhost:5173")
 public class KanbanApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(KanbanApplication.class, args);
