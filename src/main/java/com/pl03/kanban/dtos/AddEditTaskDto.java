@@ -1,11 +1,9 @@
 package com.pl03.kanban.dtos;
 
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-public class AddTaskDto {
+public class AddEditTaskDto {
     private int id;
     private String title;
     private String description;

@@ -1,13 +1,18 @@
 package com.pl03.kanban.entities;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 
 import java.sql.Timestamp;
 
 @Data
 @Entity
 @Table(name = "task")
+@AllArgsConstructor
+@NoArgsConstructor
 public class Task {
 
     @Id

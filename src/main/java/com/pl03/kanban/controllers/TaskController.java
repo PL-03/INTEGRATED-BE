@@ -1,6 +1,6 @@
 package com.pl03.kanban.controllers;
 
-import com.pl03.kanban.dtos.AddTaskDto;
+import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.entities.Task;
 import com.pl03.kanban.services.TaskService;
@@ -29,27 +29,14 @@ public class TaskController {
     }
 
     @GetMapping("/tasks/{id}")
-    public ResponseEntity<Task> taskDetail(@PathVariable int id) {
+    public ResponseEntity<Task> getTaskById(@PathVariable int id) {
         Task task = taskService.getTaskById(id);
-        if (task == null) {
-            return ResponseEntity.notFound().build();
-        }
         return ResponseEntity.ok(task);
     }
 
     @PostMapping("/tasks")
-    @ResponseStatus(HttpStatus.CREATED)
-    public AddTaskDto addTask(@RequestBody AddTaskDto addTaskDto) {
-        Task task = new Task();
-        task.setTitle(addTaskDto.getTitle());
-        task.setDescription(addTaskDto.getDescription());
-        task.setAssignees(addTaskDto.getAssignees());
-        task.setStatus(addTaskDto.getStatus() != null ? Task.TaskStatus.valueOf(addTaskDto.getStatus()) : Task.TaskStatus.NO_STATUS);
-        Task savedTask = taskService.addTask(task);
-
-        addTaskDto.setId(savedTask.getId());
-        addTaskDto.setStatus(savedTask.getStatus().name());
-
-        return addTaskDto;
+    public ResponseEntity<AddEditTaskDto> createTask(@RequestBody AddEditTaskDto addEditTaskDto) {
+        AddEditTaskDto createdTask = taskService.createTask(addEditTaskDto);
+        return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
     }
 }
