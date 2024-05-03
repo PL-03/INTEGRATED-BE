@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 import java.sql.Timestamp;
 
 @Data
@@ -32,10 +31,10 @@ public class Task {
     @Enumerated(EnumType.STRING)
     private TaskStatus status;
 
-    @Column(name = "createdOn", nullable = false, updatable = false, insertable = false)
+    @Column(nullable = false, updatable = false, insertable = false)
     private Timestamp createdOn;
 
-    @Column(name = "updatedOn", nullable = false, insertable = false)
+    @Column(nullable = false, updatable = false)
     private Timestamp updatedOn;
 
     public enum TaskStatus {
