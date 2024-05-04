@@ -34,7 +34,7 @@ public class Task {
     @Column(nullable = false, updatable = false, insertable = false)
     private Timestamp createdOn;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false, insertable = false)
     private Timestamp updatedOn;
 
     public enum TaskStatus {
