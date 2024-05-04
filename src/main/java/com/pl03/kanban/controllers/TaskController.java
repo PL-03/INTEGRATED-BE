@@ -39,4 +39,10 @@ public class TaskController {
         AddEditTaskDto createdTask = taskService.createTask(addEditTaskDto);
         return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
     }
+
+    @DeleteMapping("/tasks/{id}")
+    public ResponseEntity<AddEditTaskDto> deleteTask(@PathVariable int id){
+        AddEditTaskDto addEditTaskById = taskService.deleteTaskById(id);
+        return ResponseEntity.ok(addEditTaskById);
+    }
 }

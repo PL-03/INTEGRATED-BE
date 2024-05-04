@@ -10,4 +10,6 @@ public interface TaskService {
     AddEditTaskDto createTask(AddEditTaskDto addEditTaskDto);
     List<GetAllTaskDto> getAllTasks();
     Task getTaskById(int id);
+
+    AddEditTaskDto deleteTaskById(int id);
 }

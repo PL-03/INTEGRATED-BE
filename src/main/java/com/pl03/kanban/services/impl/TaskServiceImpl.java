@@ -46,6 +46,14 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new TaskNotFoundException("Task with id " + id + " does not exist"));
     }
 
+    @Override
+    public AddEditTaskDto deleteTaskById(int id){
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new TaskNotFoundException("Task with id " + id + " does not exist"));
+        taskRepository.delete(task);
+        return mapToAddEditTaskDto(task);
+    }
+
 
     //map AddEditDto to task entity
     private Task mapToEntity(AddEditTaskDto addEditTaskDto) {
