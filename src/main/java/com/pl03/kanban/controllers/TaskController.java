@@ -40,6 +40,14 @@ public class TaskController {
         return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
     }
 
+    @PutMapping("/tasks/{id}")
+    public ResponseEntity<AddEditTaskDto> updateTask(@RequestBody AddEditTaskDto addEditTaskDto, @PathVariable("id") int taskId){
+        AddEditTaskDto response = taskService.updateTask(addEditTaskDto, taskId);
+        return new ResponseEntity<>(response,HttpStatus.OK);
+
+
+    }
+
     @DeleteMapping("/tasks/{id}")
     public ResponseEntity<AddEditTaskDto> deleteTask(@PathVariable int id){
         AddEditTaskDto addEditTaskById = taskService.deleteTaskById(id);

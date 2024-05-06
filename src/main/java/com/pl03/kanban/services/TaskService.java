@@ -12,4 +12,5 @@ public interface TaskService {
     Task getTaskById(int id);
 
     AddEditTaskDto deleteTaskById(int id);
+    AddEditTaskDto updateTask(AddEditTaskDto addEditTaskDto, int id);
 }
