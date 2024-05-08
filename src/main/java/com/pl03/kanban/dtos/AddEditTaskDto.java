@@ -23,7 +23,4 @@ public class AddEditTaskDto {
         this.assignees = assignees == null ? null : assignees.trim();
     }
 
-    public void setStatus(String status) {
-        this.status = status == null ? "NO_STATUS" : status; //defaut is NO_STATUS
-    }
 }
