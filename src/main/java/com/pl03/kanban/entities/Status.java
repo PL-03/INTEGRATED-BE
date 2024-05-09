@@ -21,4 +21,12 @@ public class Status {
 
     @Column(name = "statusDescription", length = 200)
     private String description;
+
+    public void setName(String name) {
+        this.name = name == null ? null : name.trim();
+    }
+
+    public void setDescription(String description) {
+        this.description = description == null ? null : description.trim();
+    }
 }
