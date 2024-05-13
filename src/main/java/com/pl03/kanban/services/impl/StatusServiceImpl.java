@@ -25,9 +25,12 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public Status createStatus(String name, String description) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Status name cannot be empty");
+        }
         Status status = new Status();
-        status.setName(name);
-        status.setDescription(description);
+        status.setName(name.trim());
+        status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
         return statusRepository.save(status);
     }
 
@@ -49,8 +52,12 @@ public class StatusServiceImpl implements StatusService {
         }
         Status status = statusRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException("Status with id " + id + " does not exist"));
-        status.setName(name);
-        status.setDescription(description);
+        if (name == null || name.trim().isEmpty()) {
+            // in name is null. the status name as it is
+        } else {
+            status.setName(name.trim());
+        }
+        status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
         return statusRepository.save(status);
     }
 

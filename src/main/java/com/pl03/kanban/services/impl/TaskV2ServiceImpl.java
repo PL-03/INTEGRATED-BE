@@ -98,7 +98,7 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         addEditTaskDto.setTitle(task.getTitle());
         addEditTaskDto.setDescription(task.getDescription());
         addEditTaskDto.setAssignees(task.getAssignees());
-        addEditTaskDto.setStatus(String.valueOf(task.getStatus().getStatusId()));
+        addEditTaskDto.setStatus(String.valueOf(task.getStatus().getId()));
         return addEditTaskDto;
     }
 }
