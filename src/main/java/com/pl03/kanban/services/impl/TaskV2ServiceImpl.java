@@ -4,6 +4,7 @@ import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
+import com.pl03.kanban.exceptions.InvalidTaskTitleException;
 import com.pl03.kanban.exceptions.TaskNotFoundException;
 import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
@@ -63,9 +64,14 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         TaskV2 task = taskV2Repository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException("Task with id " + id + " does not exist"));
 
-        task.setTitle(addEditTaskDto.getTitle());
-        task.setDescription(addEditTaskDto.getDescription());
-        task.setAssignees(addEditTaskDto.getAssignees());
+        // Validate the input
+        if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().trim().isEmpty()) {
+            throw new InvalidTaskTitleException("Task title cannot be null or empty");
+        } else {
+            task.setTitle(addEditTaskDto.getTitle().trim());
+        }
+        task.setDescription(addEditTaskDto.getDescription() != null ? addEditTaskDto.getDescription().trim() : null);
+        task.setAssignees(addEditTaskDto.getAssignees() != null ? addEditTaskDto.getAssignees().trim() : null);
 
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))

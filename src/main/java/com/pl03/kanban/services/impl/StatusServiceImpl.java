@@ -2,6 +2,7 @@ package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
+import com.pl03.kanban.exceptions.InvalidStatusNameException;
 import com.pl03.kanban.exceptions.TaskNotFoundException;
 import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
@@ -52,11 +53,12 @@ public class StatusServiceImpl implements StatusService {
         }
         Status status = statusRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException("Status with id " + id + " does not exist"));
+
         if (name == null || name.trim().isEmpty()) {
-            // in name is null. the status name as it is
-        } else {
-            status.setName(name.trim());
+            throw new InvalidStatusNameException("Status name cannot be null or empty");
         }
+
+        status.setName(name.trim());
         status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
         return statusRepository.save(status);
     }

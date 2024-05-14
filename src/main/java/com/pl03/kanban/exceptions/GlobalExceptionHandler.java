@@ -27,4 +27,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
+
+    @ExceptionHandler(InvalidTaskTitleException.class)
+    public ResponseEntity<String> handleInvalidTaskTitleException(InvalidTaskTitleException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidStatusNameException.class)
+    public ResponseEntity<String> handleInvalidStatusNameException(InvalidStatusNameException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
 }

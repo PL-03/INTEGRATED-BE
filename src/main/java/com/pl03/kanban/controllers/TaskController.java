@@ -3,6 +3,7 @@ package com.pl03.kanban.controllers;
 import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.entities.TaskV2;
+import com.pl03.kanban.exceptions.InvalidTaskTitleException;
 import com.pl03.kanban.services.TaskV2Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -41,9 +42,13 @@ public class TaskController {
     }
 
     @PutMapping("/tasks/{id}")
-    public ResponseEntity<AddEditTaskDto> updateTask(@RequestBody AddEditTaskDto addEditTaskDto, @PathVariable("id") int taskId) {
-        AddEditTaskDto response = taskV2Service.updateTask(addEditTaskDto, taskId);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+    public ResponseEntity<Object> updateTask(@RequestBody AddEditTaskDto addEditTaskDto, @PathVariable("id") int taskId) {
+        try {
+            AddEditTaskDto response = taskV2Service.updateTask(addEditTaskDto, taskId);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (InvalidTaskTitleException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        }
     }
 
     @DeleteMapping("/tasks/{id}")

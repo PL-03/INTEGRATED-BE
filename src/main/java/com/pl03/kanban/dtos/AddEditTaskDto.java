@@ -1,6 +1,5 @@
 package com.pl03.kanban.dtos;
 
-
 import lombok.Data;
 
 @Data
@@ -16,11 +15,10 @@ public class AddEditTaskDto {
     }
 
     public void setDescription(String description) {
-        this.description = description == null ? null : description.trim();
+        this.description = description == null || description.trim().isEmpty() ? null : description.trim();
     }
 
     public void setAssignees(String assignees) {
-        this.assignees = assignees == null ? null : assignees.trim();
+        this.assignees = assignees == null || assignees.trim().isEmpty() ? null : assignees.trim();
     }
-
 }
