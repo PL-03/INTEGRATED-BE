@@ -5,7 +5,7 @@ import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
 import com.pl03.kanban.exceptions.InvalidTaskTitleException;
-import com.pl03.kanban.exceptions.TaskNotFoundException;
+import com.pl03.kanban.exceptions.ItemNotFoundException;
 import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
 import com.pl03.kanban.services.TaskV2Service;
@@ -48,13 +48,13 @@ public class TaskV2ServiceImpl implements TaskV2Service {
     @Override
     public TaskV2 getTaskById(int id) {
         return taskV2Repository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException("Task with id " + id + " does not exist"));
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
     }
 
     @Override
     public AddEditTaskDto deleteTaskById(int id) {
         TaskV2 task = taskV2Repository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException("Task with id " + id + " does not exist"));
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
         taskV2Repository.delete(task);
         return mapToAddEditTaskDto(task);
     }
@@ -62,7 +62,7 @@ public class TaskV2ServiceImpl implements TaskV2Service {
     @Override
     public AddEditTaskDto updateTask(AddEditTaskDto addEditTaskDto, int id) {
         TaskV2 task = taskV2Repository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException("Task with id " + id + " does not exist"));
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
 
         // Validate the input
         if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().trim().isEmpty()) {
@@ -75,7 +75,7 @@ public class TaskV2ServiceImpl implements TaskV2Service {
 
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
-                    .orElseThrow(() -> new TaskNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
+                    .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
             task.setStatus(status);
         }
 
@@ -88,7 +88,7 @@ public class TaskV2ServiceImpl implements TaskV2Service {
             return new TaskV2(addEditTaskDto.getTitle(), addEditTaskDto.getDescription(), addEditTaskDto.getAssignees());
         } else {
             Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
-                    .orElseThrow(() -> new TaskNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
+                    .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
             TaskV2 task = new TaskV2();
             task.setTitle(addEditTaskDto.getTitle());
             task.setDescription(addEditTaskDto.getDescription());

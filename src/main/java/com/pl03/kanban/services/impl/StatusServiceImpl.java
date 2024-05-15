@@ -3,7 +3,7 @@ package com.pl03.kanban.services.impl;
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
 import com.pl03.kanban.exceptions.InvalidStatusNameException;
-import com.pl03.kanban.exceptions.TaskNotFoundException;
+import com.pl03.kanban.exceptions.ItemNotFoundException;
 import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
 import com.pl03.kanban.services.StatusService;
@@ -43,7 +43,7 @@ public class StatusServiceImpl implements StatusService {
     @Override
     public Status getStatusById(int id) {
         return statusRepository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException("Status with id " + id + " does not exist"));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
     }
 
     @Override
@@ -52,7 +52,7 @@ public class StatusServiceImpl implements StatusService {
             throw new IllegalArgumentException("Cannot modify the default 'No Status' status");
         }
         Status status = statusRepository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException("Status with id " + id + " does not exist"));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
 
         if (name == null || name.trim().isEmpty()) {
             throw new InvalidStatusNameException("Status name cannot be null or empty");
@@ -69,7 +69,7 @@ public class StatusServiceImpl implements StatusService {
             throw new IllegalArgumentException("Cannot delete the default 'No Status' status");
         }
         Status status = statusRepository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException("Status with id " + id + " does not exist"));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
         statusRepository.delete(status);
         return status;
     }
@@ -77,9 +77,9 @@ public class StatusServiceImpl implements StatusService {
     @Override
     public void deleteStatusAndTransferTasks(int id, int newStatusId) {
         Status currentStatus = statusRepository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException("Status with id " + id + " does not exist"));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
         Status newStatus = statusRepository.findById(newStatusId)
-                .orElseThrow(() -> new TaskNotFoundException("Status with id " + newStatusId + " does not exist"));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + newStatusId + " does not exist"));
 
         List<TaskV2> tasksWithCurrentStatus = taskV2Repository.findByStatus(currentStatus);
         tasksWithCurrentStatus.forEach(task -> task.setStatus(newStatus));

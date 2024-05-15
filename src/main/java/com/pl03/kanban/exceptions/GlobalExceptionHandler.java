@@ -14,9 +14,9 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler(TaskNotFoundException.class)
-    public ResponseEntity<Object> handleTaskNotFoundException(
-            TaskNotFoundException ex, WebRequest request) {
+    @ExceptionHandler(ItemNotFoundException.class)
+    public ResponseEntity<Object> handleItemNotFoundException(
+            ItemNotFoundException ex, WebRequest request) {
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());
