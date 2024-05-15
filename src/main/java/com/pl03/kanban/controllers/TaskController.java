@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins =  {"http://localhost:5173","http://ip23pl3.sit.kmutt.ac.th}","http://ip23pl3.sit.kmutt.ac.th"})
+@CrossOrigin(origins =  {"http://localhost:5173","http://ip23pl3.sit.kmutt.ac.th","http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
 @RequestMapping
 public class TaskController {
@@ -24,8 +24,10 @@ public class TaskController {
     }
 
     @GetMapping("/tasks")
-    public ResponseEntity<List<GetAllTaskDto>> getAllTasks() {
-        List<GetAllTaskDto> allTasks = taskV2Service.getAllTasks();
+    public ResponseEntity<List<GetAllTaskDto>> getAllTasks(
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) List<String> filterStatuses) {
+        List<GetAllTaskDto> allTasks = taskV2Service.getAllTasks(sortBy, filterStatuses);
         return ResponseEntity.status(HttpStatus.OK).body(allTasks);
     }
 

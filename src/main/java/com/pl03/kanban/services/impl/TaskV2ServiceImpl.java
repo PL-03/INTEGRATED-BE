@@ -10,6 +10,7 @@ import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
 import com.pl03.kanban.services.TaskV2Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,14 +29,30 @@ public class TaskV2ServiceImpl implements TaskV2Service {
 
     @Override
     public AddEditTaskDto createTask(AddEditTaskDto addEditTaskDto) {
+        //validate title
+        if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().trim().isEmpty()) {
+            throw new InvalidTaskTitleException("Task title cannot be null or empty");
+        }
+
         TaskV2 task = mapToEntity(addEditTaskDto);
         TaskV2 savedTask = taskV2Repository.save(task);
         return mapToAddEditTaskDto(savedTask);
     }
 
     @Override
-    public List<GetAllTaskDto> getAllTasks() {
-        List<TaskV2> tasks = taskV2Repository.findAll();
+    public List<GetAllTaskDto> getAllTasks(String sortBy, List<String> filterStatuses) {
+        List<TaskV2> tasks;
+        if (sortBy == null && (filterStatuses == null || filterStatuses.isEmpty())) {
+            tasks = taskV2Repository.findAll();
+        } else if (sortBy == null) {
+            List<Status> filteredStatuses = statusRepository.findByNameIn(filterStatuses);
+            tasks = taskV2Repository.findByStatusIn(filteredStatuses);
+        } else if (filterStatuses == null || filterStatuses.isEmpty()) {
+            tasks = taskV2Repository.findAll(Sort.by(Sort.Direction.ASC, sortBy));
+        } else {
+            List<Status> filteredStatuses = statusRepository.findByNameIn(filterStatuses);
+            tasks = taskV2Repository.findByStatusIn(filteredStatuses, Sort.by(Sort.Direction.ASC, sortBy));
+        }
         return tasks.stream()
                 .map(task -> new GetAllTaskDto(
                         task.getId(),
@@ -68,10 +85,10 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().trim().isEmpty()) {
             throw new InvalidTaskTitleException("Task title cannot be null or empty");
         } else {
-            task.setTitle(addEditTaskDto.getTitle().trim());
+            task.setTitle(addEditTaskDto.getTitle());
         }
-        task.setDescription(addEditTaskDto.getDescription() != null ? addEditTaskDto.getDescription().trim() : null);
-        task.setAssignees(addEditTaskDto.getAssignees() != null ? addEditTaskDto.getAssignees().trim() : null);
+        task.setDescription(addEditTaskDto.getDescription());
+        task.setAssignees(addEditTaskDto.getAssignees());
 
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
