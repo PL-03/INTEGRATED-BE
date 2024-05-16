@@ -13,5 +13,4 @@ public interface TaskV2Service {
     AddEditTaskDto deleteTaskById(int id);
     AddEditTaskDto updateTask(AddEditTaskDto addEditTaskDto, int id);
 
-//    List<GetAllTaskDto> getAllTasksSortedAndFiltered (String sortBy, List<String> filterStatuses);
 }

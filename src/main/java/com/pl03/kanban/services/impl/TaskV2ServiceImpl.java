@@ -4,7 +4,7 @@ import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
-import com.pl03.kanban.exceptions.InvalidTaskTitleException;
+import com.pl03.kanban.exceptions.InvalidTaskFiledException;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
 import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
@@ -13,7 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,9 +32,16 @@ public class TaskV2ServiceImpl implements TaskV2Service {
 
     @Override
     public AddEditTaskDto createTask(AddEditTaskDto addEditTaskDto) {
-        //validate title
-        if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().trim().isEmpty()) {
-            throw new InvalidTaskTitleException("Task title cannot be null or empty");
+        List<Map<String, String>> errors = validateTaskFields(addEditTaskDto);
+        if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().isEmpty()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", "title");
+            error.put("message", "Title is required");
+            errors.add(error);
+        }
+
+        if (!errors.isEmpty()) {
+            throw new InvalidTaskFiledException("Validation error. Check 'errors' field for details", errors);
         }
 
         TaskV2 task = mapToEntity(addEditTaskDto);
@@ -81,11 +91,9 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         TaskV2 task = taskV2Repository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
 
-        // Validate the input
-        if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().trim().isEmpty()) {
-            throw new InvalidTaskTitleException("Task title cannot be null or empty");
-        } else {
-            task.setTitle(addEditTaskDto.getTitle());
+        List<Map<String, String>> errors = validateTaskFields(addEditTaskDto);
+        if (!errors.isEmpty()) {
+            throw new InvalidTaskFiledException("Validation error. Check 'errors' field for details", errors);
         }
         task.setDescription(addEditTaskDto.getDescription());
         task.setAssignees(addEditTaskDto.getAssignees());
@@ -123,5 +131,37 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         addEditTaskDto.setAssignees(task.getAssignees());
         addEditTaskDto.setStatus(String.valueOf(task.getStatus().getId()));
         return addEditTaskDto;
+    }
+
+    private List<Map<String, String>> validateTaskFields(AddEditTaskDto addEditTaskDto) {
+        List<Map<String, String>> errors = new ArrayList<>();
+
+        if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().trim().isEmpty()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", "title");
+            error.put("message", "Title cannot be null or empty");
+            errors.add(error);
+        } else if (addEditTaskDto.getTitle().trim().length() > 100) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", "title");
+            error.put("message", "Title cannot exceed 100 characters");
+            errors.add(error);
+        }
+
+        if (addEditTaskDto.getDescription() != null && addEditTaskDto.getDescription().trim().length() > 500) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", "description");
+            error.put("message", "size must be between 0 and 500");
+            errors.add(error);
+        }
+
+        if (addEditTaskDto.getAssignees() != null && addEditTaskDto.getAssignees().trim().length() > 30) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", "assignees");
+            error.put("message", "Assignees cannot exceed 30 characters");
+            errors.add(error);
+        }
+
+        return errors;
     }
 }

@@ -24,7 +24,7 @@ public class Status {
     private String description;
 
     public void setName(String name) {
-        this.name = name == null ? null : name.trim();
+        this.name = name == null || name.trim().isEmpty() ? null : name.trim();
     }
 
     public void setDescription(String description) {

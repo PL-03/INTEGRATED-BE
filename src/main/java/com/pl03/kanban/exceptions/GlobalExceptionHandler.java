@@ -28,13 +28,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(InvalidTaskTitleException.class)
-    public ResponseEntity<String> handleInvalidTaskTitleException(InvalidTaskTitleException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    @ExceptionHandler(InvalidTaskFiledException.class)
+    public ResponseEntity<Object> handleInvalidTaskFiledException(InvalidTaskFiledException ex, WebRequest request) {
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("message", ex.getMessage());
+        body.put("instance", request.getDescription(false));
+        body.put("error", HttpStatus.BAD_REQUEST.getReasonPhrase());
+        body.put("errors", ex.getErrors());
+
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(InvalidStatusNameException.class)
-    public ResponseEntity<String> handleInvalidStatusNameException(InvalidStatusNameException ex) {
+    @ExceptionHandler(InvalidStatusFiledException.class)
+    public ResponseEntity<String> handleInvalidStatusFiledException(InvalidStatusFiledException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 }

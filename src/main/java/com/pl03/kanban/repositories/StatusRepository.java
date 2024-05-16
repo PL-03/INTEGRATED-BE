@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface StatusRepository extends JpaRepository<Status, Integer> {
     List<Status> findByNameIn(List<String> names);
+
+    List<Status> findByNameIgnoreCaseAndIdNot(String name, int id);
 }

@@ -2,7 +2,7 @@ package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
-import com.pl03.kanban.exceptions.InvalidStatusNameException;
+import com.pl03.kanban.exceptions.InvalidStatusFiledException;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
 import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
@@ -10,6 +10,7 @@ import com.pl03.kanban.services.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -24,15 +25,11 @@ public class StatusServiceImpl implements StatusService {
         this.taskV2Repository = taskV2Repository;
     }
 
-    @Override
-    public Status createStatus(String name, String description) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Status name cannot be empty");
-        }
-        Status status = new Status();
-        status.setName(name.trim());
-        status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
-        return statusRepository.save(status);
+    private static final List<String> DEFAULT_STATUS_NAMES = Arrays.asList("No Status", "Done");
+
+    private boolean isStatusNameDefault(String name) {
+        return DEFAULT_STATUS_NAMES.stream()
+                .anyMatch(protectedName -> protectedName.equalsIgnoreCase(name)); //return true if status name is matched
     }
 
     @Override
@@ -46,16 +43,35 @@ public class StatusServiceImpl implements StatusService {
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
     }
 
+
+    @Override
+    public Status createStatus(String name, String description) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new InvalidStatusFiledException("Status name cannot be null or empty");
+        }
+        if (isStatusNameTaken(name, 0)) {
+            throw new InvalidStatusFiledException("Status name is already taken");
+        }
+        Status status = new Status();
+        status.setName(name.trim());
+        status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
+        return statusRepository.save(status);
+    }
+
     @Override
     public Status updateStatus(int id, String name, String description) {
-        if (id == 1) {
-            throw new IllegalArgumentException("Cannot modify the default 'No Status' status");
-        }
         Status status = statusRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
 
+        if (isStatusNameDefault(status.getName())) {
+            throw new InvalidStatusFiledException("Cannot edit default status");
+        }
+
         if (name == null || name.trim().isEmpty()) {
-            throw new InvalidStatusNameException("Status name cannot be null or empty");
+            throw new InvalidStatusFiledException("Status name cannot be null or empty");
+        }
+        if (isStatusNameTaken(name, id)) {
+            throw new InvalidStatusFiledException("Status name is already taken");
         }
 
         status.setName(name.trim());
@@ -65,11 +81,13 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public Status deleteStatus(int id) {
-        if (id == 1) {
-            throw new IllegalArgumentException("Cannot delete the default 'No Status' status");
-        }
         Status status = statusRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
+
+        if (isStatusNameDefault(status.getName())) {
+            throw new InvalidStatusFiledException("Cannot delete default status");
+        }
+
         statusRepository.delete(status);
         return status;
     }
@@ -86,5 +104,10 @@ public class StatusServiceImpl implements StatusService {
         taskV2Repository.saveAll(tasksWithCurrentStatus);
 
         statusRepository.delete(currentStatus);
+    }
+
+    private boolean isStatusNameTaken(String name, int excludedId) {
+        List<Status> statuses = statusRepository.findByNameIgnoreCaseAndIdNot(name.trim().toUpperCase(), excludedId);
+        return !statuses.isEmpty();
     }
 }
