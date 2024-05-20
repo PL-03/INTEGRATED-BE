@@ -1,8 +1,10 @@
 package com.pl03.kanban.dtos;
 
 import lombok.Data;
+import lombok.experimental.FieldNameConstants;
 
 @Data
+@FieldNameConstants
 public class AddEditTaskDto {
     private int id;
     private String title;

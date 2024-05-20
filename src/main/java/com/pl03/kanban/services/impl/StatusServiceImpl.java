@@ -2,7 +2,7 @@ package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
-import com.pl03.kanban.exceptions.InvalidStatusFiledException;
+import com.pl03.kanban.exceptions.InvalidStatusFieldException;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
 import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
@@ -10,8 +10,7 @@ import com.pl03.kanban.services.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class StatusServiceImpl implements StatusService {
@@ -19,18 +18,25 @@ public class StatusServiceImpl implements StatusService {
     private final StatusRepository statusRepository;
     private final TaskV2Repository taskV2Repository;
 
+    private static final List<String> DEFAULT_STATUS_NAMES = Arrays.asList("No Status", "Done");
+    private static final int MAX_STATUS_NAME_LENGTH = 50;
+    private static final int MAX_STATUS_DESCRIPTION_LENGTH = 200;
     @Autowired
     public StatusServiceImpl(StatusRepository statusRepository, TaskV2Repository taskV2Repository) {
         this.statusRepository = statusRepository;
         this.taskV2Repository = taskV2Repository;
     }
 
-    private static final List<String> DEFAULT_STATUS_NAMES = Arrays.asList("No Status", "Done");
-
     private boolean isStatusNameDefault(String name) {
         return DEFAULT_STATUS_NAMES.stream()
                 .anyMatch(protectedName -> protectedName.equalsIgnoreCase(name)); //return true if status name is matched
     }
+
+    private boolean isStatusNameTaken(String name, int excludedId) {
+        List<Status> statuses = statusRepository.findByNameIgnoreCaseAndIdNot(name.trim().toUpperCase(), excludedId);
+        return !statuses.isEmpty();
+    }
+
 
     @Override
     public List<Status> getAllStatuses() {
@@ -46,12 +52,12 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public Status createStatus(String name, String description) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new InvalidStatusFiledException("Status name cannot be null or empty");
+        List<Map<String, String>> errors = validateStatusFields(name, description, 0);
+
+        if (!errors.isEmpty()) {
+            throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errors);
         }
-        if (isStatusNameTaken(name, 0)) {
-            throw new InvalidStatusFiledException("Status name is already taken");
-        }
+
         Status status = new Status();
         status.setName(name.trim());
         status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
@@ -64,14 +70,13 @@ public class StatusServiceImpl implements StatusService {
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
 
         if (isStatusNameDefault(status.getName())) {
-            throw new InvalidStatusFiledException("Cannot edit default status");
+            throw new InvalidStatusFieldException(status.getName() + " cannot be modified");
         }
 
-        if (name == null || name.trim().isEmpty()) {
-            throw new InvalidStatusFiledException("Status name cannot be null or empty");
-        }
-        if (isStatusNameTaken(name, id)) {
-            throw new InvalidStatusFiledException("Status name is already taken");
+        List<Map<String, String>> errors = validateStatusFields(name, description, id);
+
+        if (!errors.isEmpty()) {
+            throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errors);
         }
 
         status.setName(name.trim());
@@ -85,7 +90,12 @@ public class StatusServiceImpl implements StatusService {
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
 
         if (isStatusNameDefault(status.getName())) {
-            throw new InvalidStatusFiledException("Cannot delete default status");
+            throw new InvalidStatusFieldException(status.getName() + " cannot be deleted");
+        }
+
+        List<TaskV2> tasksWithStatus = taskV2Repository.findByStatus(status);
+        if (!tasksWithStatus.isEmpty()) {
+            throw new InvalidStatusFieldException("Destination status for task transfer not specified");
         }
 
         statusRepository.delete(status);
@@ -97,8 +107,10 @@ public class StatusServiceImpl implements StatusService {
         Status currentStatus = statusRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
         Status newStatus = statusRepository.findById(newStatusId)
-                .orElseThrow(() -> new ItemNotFoundException("Status with id " + newStatusId + " does not exist"));
-
+                .orElseThrow(() -> new InvalidStatusFieldException("the specified status for task transfer does not exist"));
+        if (id == newStatusId) {
+            throw new InvalidStatusFieldException("destination status for task transfer must be different from current status");
+        }
         List<TaskV2> tasksWithCurrentStatus = taskV2Repository.findByStatus(currentStatus);
         tasksWithCurrentStatus.forEach(task -> task.setStatus(newStatus));
         taskV2Repository.saveAll(tasksWithCurrentStatus);
@@ -106,8 +118,34 @@ public class StatusServiceImpl implements StatusService {
         statusRepository.delete(currentStatus);
     }
 
-    private boolean isStatusNameTaken(String name, int excludedId) {
-        List<Status> statuses = statusRepository.findByNameIgnoreCaseAndIdNot(name.trim().toUpperCase(), excludedId);
-        return !statuses.isEmpty();
+
+    private List<Map<String, String>> validateStatusFields(String name, String description, int excludedId) {
+        List<Map<String, String>> errors = new ArrayList<>();
+
+        if (name == null || name.trim().isEmpty()) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", Status.Fields.name);
+            error.put("message", "must not be null");
+            errors.add(error);
+        } else if (name.trim().length() > MAX_STATUS_NAME_LENGTH) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", Status.Fields.name);
+            error.put("message", "size must be between 0 and " + MAX_STATUS_NAME_LENGTH );
+            errors.add(error);
+        } else if (isStatusNameTaken(name, excludedId)) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", Status.Fields.name);
+            error.put("message", "must be unique");
+            errors.add(error);
+        }
+
+        if (description != null && description.trim().length() > MAX_STATUS_DESCRIPTION_LENGTH) {
+            Map<String, String> error = new HashMap<>();
+            error.put("field", Status.Fields.description);
+            error.put("message", "size must be between 0 and " + MAX_STATUS_DESCRIPTION_LENGTH);
+            errors.add(error);
+        }
+
+        return errors;
     }
 }

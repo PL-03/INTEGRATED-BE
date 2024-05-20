@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-@CrossOrigin(origins = {"http://localhost:5173","http://intproj23.sit.kmutt.ac.th","http://ip23pl3.sit.kmutt.ac.th"})
+@CrossOrigin(origins = {"http://localhost:5173",
+                        "http://intproj23.sit.kmutt.ac.th/pl3",
+                        "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
 @RequestMapping
 public class StatusController {

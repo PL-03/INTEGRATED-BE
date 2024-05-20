@@ -9,6 +9,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @ControllerAdvice
@@ -23,26 +24,29 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         body.put("status", HttpStatus.NOT_FOUND.value());
         body.put("error", HttpStatus.NOT_FOUND.getReasonPhrase());
         body.put("message", ex.getMessage());
-        body.put("path", request.getDescription(false).substring(4)); // ลบ 'uri=' ให้ตรงกับ requirement
+        body.put("path", request.getDescription(false).substring(4)); // delete 'uri=' just for the requirement
 
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(InvalidTaskFiledException.class)
-    public ResponseEntity<Object> handleInvalidTaskFiledException(InvalidTaskFiledException ex, WebRequest request) {
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("message", ex.getMessage());
-        body.put("instance", request.getDescription(false));
-        body.put("error", HttpStatus.BAD_REQUEST.getReasonPhrase());
-        body.put("errors", ex.getErrors());
-
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    @ExceptionHandler(InvalidTaskFieldException.class)
+    public ResponseEntity<Object> handleInvalidTaskFieldException(InvalidTaskFieldException ex, WebRequest request) {
+        return getResponseForFieldsValidation(request, ex.getMessage(), ex.getErrors(), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(InvalidStatusFiledException.class)
-    public ResponseEntity<String> handleInvalidStatusFiledException(InvalidStatusFiledException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    @ExceptionHandler(InvalidStatusFieldException.class)
+    public ResponseEntity<Object> handleInvalidStatusFieldException(InvalidStatusFieldException ex, WebRequest request) {
+        return getResponseForFieldsValidation(request, ex.getMessage(), ex.getErrors(), HttpStatus.BAD_REQUEST);
+    }
+
+    private ResponseEntity<Object> getResponseForFieldsValidation(WebRequest request, String message, List<Map<String, String>> errors, HttpStatus status) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", status.value());
+        body.put("message", message);
+        body.put("instance", request.getDescription(false));
+        body.put("error", status.getReasonPhrase());
+        body.put("errors", errors);
+
+        return new ResponseEntity<>(body, status);
     }
 }

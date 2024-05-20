@@ -3,7 +3,6 @@ package com.pl03.kanban.controllers;
 import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.entities.TaskV2;
-import com.pl03.kanban.exceptions.InvalidTaskFiledException;
 import com.pl03.kanban.services.TaskV2Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins =  {"http://localhost:5173","http://intproj23.sit.kmutt.ac.th","http://ip23pl3.sit.kmutt.ac.th"})
+@CrossOrigin(origins = {"http://localhost:5173",
+                        "http://intproj23.sit.kmutt.ac.th/pl3",
+                        "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
 @RequestMapping
 public class TaskController {
