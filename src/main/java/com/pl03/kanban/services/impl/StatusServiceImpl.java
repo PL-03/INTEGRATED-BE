@@ -66,14 +66,13 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public Status updateStatus(int id, String name, String description) {
+        List<Map<String, String>> errors = validateStatusFields(name, description, 0);
         Status status = statusRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
 
         if (isStatusNameDefault(status.getName())) {
-            throw new InvalidStatusFieldException(status.getName() + " cannot be modified");
+            throw new InvalidStatusFieldException(status.getName() + " cannot be modified", errors);
         }
-
-        List<Map<String, String>> errors = validateStatusFields(name, description, id);
 
         if (!errors.isEmpty()) {
             throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errors);
