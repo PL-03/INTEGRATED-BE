@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @CrossOrigin(origins = {"http://localhost:5173",
+                        "http://intproj23.sit.kmutt.ac.th",
                         "http://intproj23.sit.kmutt.ac.th/pl3",
+                        "http://intproj23.sit.kmutt.ac.th/pl3/status",
                         "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
 @RequestMapping
