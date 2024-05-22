@@ -66,7 +66,7 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public Status updateStatus(int id, String name, String description) {
-        List<Map<String, String>> errors = validateStatusFields(name, description, 0);
+        List<Map<String, String>> errors = validateStatusFields(name, description, id); // Pass the id to exclude it from uniqueness check
         Status status = statusRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
 
@@ -78,7 +78,8 @@ public class StatusServiceImpl implements StatusService {
             throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errors);
         }
 
-        status.setName(name.trim());
+        // Use the same name if the new name is null or empty
+        status.setName(name == null || name.trim().isEmpty() ? status.getName() : name.trim());
         status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
         return statusRepository.save(status);
     }
@@ -118,7 +119,7 @@ public class StatusServiceImpl implements StatusService {
     }
 
 
-    private List<Map<String, String>> validateStatusFields(String name, String description, int excludedId) {
+    private List<Map<String, String>> validateStatusFields(String name, String description, int currentStatusId) {
         List<Map<String, String>> errors = new ArrayList<>();
 
         if (name == null || name.trim().isEmpty()) {
@@ -131,7 +132,7 @@ public class StatusServiceImpl implements StatusService {
             error.put("field", Status.Fields.name);
             error.put("message", "size must be between 0 and " + MAX_STATUS_NAME_LENGTH );
             errors.add(error);
-        } else if (isStatusNameTaken(name, excludedId)) {
+        } else if (isStatusNameTaken(name, currentStatusId)) { // Pass the currentStatusId to exclude it from uniqueness check
             Map<String, String> error = new HashMap<>();
             error.put("field", Status.Fields.name);
             error.put("message", "must be unique");
