@@ -108,6 +108,11 @@ public class StatusServiceImpl implements StatusService {
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
         Status newStatus = statusRepository.findById(newStatusId)
                 .orElseThrow(() -> new InvalidStatusFieldException("the specified status for task transfer does not exist"));
+
+        if (isStatusNameDefault(currentStatus.getName())) { //in case when deleting and transfer default status
+            throw new InvalidStatusFieldException(currentStatus.getName() + " cannot be deleted");
+        }
+
         if (id == newStatusId) {
             throw new InvalidStatusFieldException("destination status for task transfer must be different from current status");
         }
