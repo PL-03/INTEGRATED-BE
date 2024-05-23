@@ -30,6 +30,6 @@ public class Status {
     }
 
     public void setDescription(String description) {
-        this.description = description == null ? null : description.trim();
+        this.description = description == null || description.trim().isEmpty() ? null : description.trim();
     }
 }

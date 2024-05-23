@@ -51,22 +51,19 @@ public class StatusServiceImpl implements StatusService {
 
 
     @Override
-    public Status createStatus(String name, String description) {
-        List<Map<String, String>> errors = validateStatusFields(name, description, 0);
+    public Status createStatus(Status status) {
+        List<Map<String, String>> errors = validateStatusFields(status.getName(), status.getDescription(), 0);
 
         if (!errors.isEmpty()) {
             throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errors);
         }
 
-        Status status = new Status();
-        status.setName(name.trim());
-        status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
         return statusRepository.save(status);
     }
 
     @Override
-    public Status updateStatus(int id, String name, String description) {
-        List<Map<String, String>> errors = validateStatusFields(name, description, id); // Pass the id to exclude it from uniqueness check
+    public Status updateStatus(int id, Status updatedStatus) {
+        List<Map<String, String>> errors = validateStatusFields(updatedStatus.getName(), updatedStatus.getDescription(), id); // Pass the id to exclude it from uniqueness check
         Status status = statusRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
 
@@ -79,10 +76,12 @@ public class StatusServiceImpl implements StatusService {
         }
 
         // Use the same name if the new name is null or empty
-        status.setName(name == null || name.trim().isEmpty() ? status.getName() : name.trim());
-        status.setDescription(description == null || description.trim().isEmpty() ? null : description.trim());
+        status.setName(updatedStatus.getName() == null || updatedStatus.getName().trim().isEmpty() ? status.getName()
+                : updatedStatus.getName().trim());
+        status.setDescription(updatedStatus.getDescription());
         return statusRepository.save(status);
     }
+
 
     @Override
     public Status deleteStatus(int id) {

@@ -39,18 +39,14 @@ public class StatusController {
     }
 
     @PostMapping("/statuses")
-    public ResponseEntity<Status> createStatus(@RequestBody Map<String, String> requestBody) {
-        String name = requestBody.get("name");
-        String description = requestBody.get("description");
-        Status createdStatus = statusService.createStatus(name, description);
+    public ResponseEntity<Status> createStatus(@RequestBody Status status) {
+        Status createdStatus = statusService.createStatus(status);
         return new ResponseEntity<>(createdStatus, HttpStatus.CREATED);
     }
 
     @PutMapping("/statuses/{id}")
-    public ResponseEntity<Status> updateStatus(@RequestBody Map<String, String> requestBody, @PathVariable int id) {
-        String name = requestBody.get("name");
-        String description = requestBody.get("description");
-        Status updatedStatus = statusService.updateStatus(id, name, description);
+    public ResponseEntity<Status> updateStatus(@RequestBody Status status, @PathVariable int id) {
+        Status updatedStatus = statusService.updateStatus(id, status);
         return ResponseEntity.ok(updatedStatus);
     }
 
