@@ -1,6 +1,7 @@
 package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.dtos.AddEditTaskDto;
+import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
@@ -11,6 +12,7 @@ import com.pl03.kanban.repositories.TaskV2Repository;
 import com.pl03.kanban.services.TaskV2Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -33,10 +35,10 @@ public class TaskV2ServiceImpl implements TaskV2Service {
 
     @Override
     public AddEditTaskDto createTask(AddEditTaskDto addEditTaskDto) {
-        List<Map<String, String>> errors = validateTaskFields(addEditTaskDto);
+        ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);
 
-        if (!errors.isEmpty()) {
-            throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errors);
+        if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
+            throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
         TaskV2 task = mapToEntity(addEditTaskDto);
@@ -88,9 +90,9 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         TaskV2 task = taskV2Repository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
 
-        List<Map<String, String>> errors = validateTaskFields(addEditTaskDto);
-        if (!errors.isEmpty()) {
-            throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errors);
+        ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);
+        if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
+            throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
         task.setTitle(addEditTaskDto.getTitle());
@@ -132,53 +134,39 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         return addEditTaskDto;
     }
 
-    private List<Map<String, String>> validateTaskFields(AddEditTaskDto addEditTaskDto) {
-        List<Map<String, String>> errors = new ArrayList<>();
+    private ErrorResponse validateTaskFields(AddEditTaskDto addEditTaskDto) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details", "");
 
         if (addEditTaskDto.getTitle() == null || addEditTaskDto.getTitle().trim().isEmpty()) {
-            Map<String, String> error = new HashMap<>();
-            error.put("field", AddEditTaskDto.Fields.title);
-            error.put("message", "must not be null");
-            errors.add(error);
+            errorResponse.addValidationError(AddEditTaskDto.Fields.title, "must not be null");
         } else if (addEditTaskDto.getTitle().trim().length() > MAX_TASK_TITLE_LENGTH) {
-            Map<String, String> error = new HashMap<>();
-            error.put("field", AddEditTaskDto.Fields.title);
-            error.put("message", "size must be between 0 and " + MAX_TASK_TITLE_LENGTH);
-            errors.add(error);
+            errorResponse.addValidationError(AddEditTaskDto.Fields.title, "size must be between 0 and " + MAX_TASK_TITLE_LENGTH);
         }
 
         if (addEditTaskDto.getDescription() != null && addEditTaskDto.getDescription().trim().length() > MAX_TASK_DESCRIPTION_LENGTH) {
-            Map<String, String> error = new HashMap<>();
-            error.put("field", AddEditTaskDto.Fields.description);
-            error.put("message", "size must be between 0 and " + MAX_TASK_DESCRIPTION_LENGTH);
-            errors.add(error);
+            errorResponse.addValidationError(AddEditTaskDto.Fields.description, "size must be between 0 and " + MAX_TASK_DESCRIPTION_LENGTH);
         }
 
         if (addEditTaskDto.getAssignees() != null && addEditTaskDto.getAssignees().trim().length() > MAX_TASK_ASSIGNEES_LENGTH) {
-            Map<String, String> error = new HashMap<>();
-            error.put("field", AddEditTaskDto.Fields.assignees);
-            error.put("message", "size must be between 0 and " + MAX_TASK_ASSIGNEES_LENGTH);
-            errors.add(error);
+            errorResponse.addValidationError(AddEditTaskDto.Fields.assignees, "size must be between 0 and " + MAX_TASK_ASSIGNEES_LENGTH);
         }
 
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             try {
                 Integer.parseInt(addEditTaskDto.getStatus());
             } catch (NumberFormatException e) {
-                Map<String, String> error = new HashMap<>();
-                error.put("field", AddEditTaskDto.Fields.status);
-                error.put("message", "Invalid status ID");
-                errors.add(error);
+                errorResponse.addValidationError(AddEditTaskDto.Fields.status, "Invalid status ID");
             }
 
-            if (errors.isEmpty() && !statusRepository.existsById(Integer.parseInt(addEditTaskDto.getStatus()))) {
-                Map<String, String> error = new HashMap<>();
-                error.put("field", AddEditTaskDto.Fields.status);
-                error.put("message", "does not exist");
-                errors.add(error);
+            if (errorResponse.getErrors().isEmpty() && !statusRepository.existsById(Integer.parseInt(addEditTaskDto.getStatus()))) {
+                errorResponse.addValidationError(AddEditTaskDto.Fields.status, "does not exist");
             }
         }
+        // If there are no validation errors, return null
+        if (errorResponse.getErrors().isEmpty()) {
+            return null;
+        }
 
-        return errors;
+        return errorResponse;
     }
 }

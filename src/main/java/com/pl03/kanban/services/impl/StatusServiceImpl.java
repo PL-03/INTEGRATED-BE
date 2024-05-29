@@ -1,5 +1,6 @@
 package com.pl03.kanban.services.impl;
 
+import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.entities.Status;
 import com.pl03.kanban.entities.TaskV2;
 import com.pl03.kanban.exceptions.InvalidStatusFieldException;
@@ -8,6 +9,7 @@ import com.pl03.kanban.repositories.StatusRepository;
 import com.pl03.kanban.repositories.TaskV2Repository;
 import com.pl03.kanban.services.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -52,10 +54,10 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public Status createStatus(Status status) {
-        List<Map<String, String>> errors = validateStatusFields(status.getName(), status.getDescription(), 0);
+        ErrorResponse errorResponse = validateStatusFields(status.getName(), status.getDescription(), 0);
 
-        if (!errors.isEmpty()) {
-            throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errors);
+        if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
+            throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
         return statusRepository.save(status);
@@ -63,16 +65,20 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public Status updateStatus(int id, Status updatedStatus) {
-        List<Map<String, String>> errors = validateStatusFields(updatedStatus.getName(), updatedStatus.getDescription(), id); // Pass the id to exclude it from uniqueness check
+        ErrorResponse errorResponse = validateStatusFields(updatedStatus.getName(), updatedStatus.getDescription(), id);
         Status status = statusRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist"));
 
         if (isStatusNameDefault(status.getName())) {
-            throw new InvalidStatusFieldException(status.getName() + " cannot be modified", errors);
+            if (errorResponse != null && !errorResponse.getErrors().isEmpty()) { //if there is sth in error list throw message and error list
+                throw new InvalidStatusFieldException(status.getName() + " cannot be modified", errorResponse.getErrors());
+            } else { //error list is empty throw only message
+                throw new InvalidStatusFieldException(status.getName() + " cannot be modified");
+            }
         }
 
-        if (!errors.isEmpty()) {
-            throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errors);
+        if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
+            throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
         // Use the same name if the new name is null or empty
@@ -123,33 +129,26 @@ public class StatusServiceImpl implements StatusService {
     }
 
 
-    private List<Map<String, String>> validateStatusFields(String name, String description, int currentStatusId) {
-        List<Map<String, String>> errors = new ArrayList<>();
+    private ErrorResponse validateStatusFields(String name, String description, int currentStatusId) {
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details", "");
 
         if (name == null || name.trim().isEmpty()) {
-            Map<String, String> error = new HashMap<>();
-            error.put("field", Status.Fields.name);
-            error.put("message", "must not be null");
-            errors.add(error);
+            errorResponse.addValidationError(Status.Fields.name, "must not be null");
         } else if (name.trim().length() > MAX_STATUS_NAME_LENGTH) {
-            Map<String, String> error = new HashMap<>();
-            error.put("field", Status.Fields.name);
-            error.put("message", "size must be between 0 and " + MAX_STATUS_NAME_LENGTH );
-            errors.add(error);
-        } else if (isStatusNameTaken(name, currentStatusId)) { // Pass the currentStatusId to exclude it from uniqueness check
-            Map<String, String> error = new HashMap<>();
-            error.put("field", Status.Fields.name);
-            error.put("message", "must be unique");
-            errors.add(error);
+            errorResponse.addValidationError(Status.Fields.name, "size must be between 0 and " + MAX_STATUS_NAME_LENGTH);
+        } else if (isStatusNameTaken(name, currentStatusId)) {
+            errorResponse.addValidationError(Status.Fields.name, "must be unique");
         }
 
         if (description != null && description.trim().length() > MAX_STATUS_DESCRIPTION_LENGTH) {
-            Map<String, String> error = new HashMap<>();
-            error.put("field", Status.Fields.description);
-            error.put("message", "size must be between 0 and " + MAX_STATUS_DESCRIPTION_LENGTH);
-            errors.add(error);
+            errorResponse.addValidationError(Status.Fields.description, "size must be between 0 and " + MAX_STATUS_DESCRIPTION_LENGTH);
         }
 
-        return errors;
+        // If there are no validation errors, return null
+        if (errorResponse.getErrors().isEmpty()) {
+            return null;
+        }
+
+        return errorResponse;
     }
 }
