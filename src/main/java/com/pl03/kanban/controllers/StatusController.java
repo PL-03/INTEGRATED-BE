@@ -1,6 +1,6 @@
 package com.pl03.kanban.controllers;
 
-import com.pl03.kanban.entities.Status;
+import com.pl03.kanban.kanban_entities.Status;
 import com.pl03.kanban.services.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

@@ -2,7 +2,7 @@ package com.pl03.kanban.controllers;
 
 import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
-import com.pl03.kanban.entities.TaskV2;
+import com.pl03.kanban.kanban_entities.TaskV2;
 import com.pl03.kanban.services.TaskV2Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

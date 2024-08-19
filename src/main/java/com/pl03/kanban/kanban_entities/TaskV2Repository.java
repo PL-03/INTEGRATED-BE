@@ -1,7 +1,7 @@
-package com.pl03.kanban.repositories;
+package com.pl03.kanban.kanban_entities;
 
-import com.pl03.kanban.entities.Status;
-import com.pl03.kanban.entities.TaskV2;
+import com.pl03.kanban.kanban_entities.Status;
+import com.pl03.kanban.kanban_entities.TaskV2;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
