@@ -1,5 +1,6 @@
 package com.pl03.kanban.services.impl;
 
+import com.pl03.kanban.configs.JwtToken;
 import com.pl03.kanban.dtos.UserDto;
 import com.pl03.kanban.services.UserService;
 import com.pl03.kanban.user_entities.User;
@@ -12,21 +13,24 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtToken jwtTokenUtil;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtToken jwtTokenUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtTokenUtil = jwtTokenUtil;
     }
 
     @Override
-    public ResponseEntity<String> login(UserDto loginRequest) {
+    public ResponseEntity<?> login(UserDto loginRequest) {
         List<String> errors = new ArrayList<>();
 
         // Validate username
@@ -52,9 +56,12 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByUsername(loginRequest.getUserName());
 
         if (user != null && passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            return ResponseEntity.ok("Login successful");
+            // Generate JWT token
+            String token = jwtTokenUtil.generateToken(user);
+            return ResponseEntity.ok(Map.of("access_token", token));
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Username or Password is incorrect");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("The username or password is incorrect.");
         }
     }
 }
+

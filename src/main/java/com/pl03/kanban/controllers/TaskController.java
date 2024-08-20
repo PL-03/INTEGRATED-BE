@@ -17,7 +17,7 @@ import java.util.List;
                         "http://intproj23.sit.kmutt.ac.th/pl3/status",
                         "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
-@RequestMapping
+@RequestMapping("/v2")
 public class TaskController {
     private final TaskV2Service taskV2Service;
 
