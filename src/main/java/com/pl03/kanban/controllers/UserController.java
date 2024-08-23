@@ -6,7 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
+@CrossOrigin(origins = {"http://localhost:5173",
+        "http://intproj23.sit.kmutt.ac.th",
+        "http://intproj23.sit.kmutt.ac.th/pl3",
+        "http://intproj23.sit.kmutt.ac.th/pl3/status",
+        "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
 public class UserController {
 

@@ -2,18 +2,23 @@ package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.configs.JwtToken;
 import com.pl03.kanban.dtos.UserDto;
+import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.services.UserService;
 import com.pl03.kanban.user_entities.User;
 import com.pl03.kanban.user_entities.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -31,25 +36,28 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<?> login(UserDto loginRequest) {
-        List<String> errors = new ArrayList<>();
+        List<ErrorResponse.ValidationError> errors = new ArrayList<>();
 
-        // Validate username
+        // Manual validation for username
         if (loginRequest.getUserName() == null || loginRequest.getUserName().isEmpty()) {
-            errors.add("Username cannot be empty");
+            errors.add(new ErrorResponse.ValidationError("userName", "Username cannot be empty"));
         } else if (loginRequest.getUserName().length() > 50) {
-            errors.add("Username must be at most 50 characters long");
+            errors.add(new ErrorResponse.ValidationError("userName", "Username must be at most 50 characters long"));
         }
 
-        // Validate password
+        // Manual validation for password
         if (loginRequest.getPassword() == null || loginRequest.getPassword().isEmpty()) {
-            errors.add("Password cannot be empty");
+            errors.add(new ErrorResponse.ValidationError("password", "Password cannot be empty"));
         } else if (loginRequest.getPassword().length() > 14) {
-            errors.add("Password must be at most 14 characters long");
+            errors.add(new ErrorResponse.ValidationError("password", "Password must be at most 14 characters long"));
         }
 
         // If there are validation errors, return them all
         if (!errors.isEmpty()) {
-            return ResponseEntity.badRequest().body(String.join(", ", errors));
+            HttpServletRequest request = ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details", request.getRequestURI());
+            errorResponse.setErrors(errors);
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
 
         // If validation passes, proceed with authentication
@@ -60,8 +68,9 @@ public class UserServiceImpl implements UserService {
             String token = jwtTokenUtil.generateToken(user);
             return ResponseEntity.ok(Map.of("access_token", token));
         } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("The username or password is incorrect.");
+            HttpServletRequest request = ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "The username or password is incorrect.", request.getRequestURI());
+            return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
         }
     }
 }
-

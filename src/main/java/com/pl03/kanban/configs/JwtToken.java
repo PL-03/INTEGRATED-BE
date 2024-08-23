@@ -35,6 +35,7 @@ public class JwtToken {
         // 30 minutes
         long expiration = 1800L;
         return Jwts.builder()
+                .setHeaderParam("typ", "JWT") //set header according to postman requirements
                 .setClaims(information)
                 .setIssuer("https://intproj23.sit.kmutt.ac.th/pl3/")
                 .setIssuedAt(new Date(System.currentTimeMillis()))
