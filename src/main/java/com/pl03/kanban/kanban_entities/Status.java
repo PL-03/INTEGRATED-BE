@@ -1,4 +1,4 @@
-package com.pl03.kanban.entities;
+package com.pl03.kanban.kanban_entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldNameConstants;
 
 @Entity
-@Table(name = "status")
+@Table(name = "status", schema = "kanban_entities")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

@@ -1,12 +1,12 @@
 package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.exceptions.ErrorResponse;
-import com.pl03.kanban.entities.Status;
-import com.pl03.kanban.entities.TaskV2;
-import com.pl03.kanban.exceptions.InvalidStatusFieldException;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
-import com.pl03.kanban.repositories.StatusRepository;
-import com.pl03.kanban.repositories.TaskV2Repository;
+import com.pl03.kanban.kanban_entities.Status;
+import com.pl03.kanban.kanban_entities.TaskV2;
+import com.pl03.kanban.exceptions.InvalidStatusFieldException;
+import com.pl03.kanban.kanban_entities.StatusRepository;
+import com.pl03.kanban.kanban_entities.TaskV2Repository;
 import com.pl03.kanban.services.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

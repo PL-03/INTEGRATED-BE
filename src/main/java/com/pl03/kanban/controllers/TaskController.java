@@ -2,7 +2,7 @@ package com.pl03.kanban.controllers;
 
 import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
-import com.pl03.kanban.entities.TaskV2;
+import com.pl03.kanban.kanban_entities.TaskV2;
 import com.pl03.kanban.services.TaskV2Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,7 +17,7 @@ import java.util.List;
                         "http://intproj23.sit.kmutt.ac.th/pl3/status",
                         "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
-@RequestMapping
+@RequestMapping("/v2")
 public class TaskController {
     private final TaskV2Service taskV2Service;
 

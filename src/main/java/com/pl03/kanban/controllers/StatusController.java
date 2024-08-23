@@ -1,6 +1,6 @@
 package com.pl03.kanban.controllers;
 
-import com.pl03.kanban.entities.Status;
+import com.pl03.kanban.kanban_entities.Status;
 import com.pl03.kanban.services.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,7 +15,7 @@ import java.util.List;
                         "http://intproj23.sit.kmutt.ac.th/pl3/status",
                         "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
-@RequestMapping
+@RequestMapping("/v2")
 public class StatusController {
 
     private final StatusService statusService;

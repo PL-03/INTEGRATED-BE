@@ -1,6 +1,6 @@
-package com.pl03.kanban.repositories;
+package com.pl03.kanban.kanban_entities;
 
-import com.pl03.kanban.entities.Status;
+import com.pl03.kanban.kanban_entities.Status;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

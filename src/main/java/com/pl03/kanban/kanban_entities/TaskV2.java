@@ -1,4 +1,4 @@
-package com.pl03.kanban.entities;
+package com.pl03.kanban.kanban_entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,7 +9,7 @@ import java.sql.Timestamp;
 
 @Data
 @Entity
-@Table(name = "taskv2")
+@Table(name = "taskv2", schema = "kanban_entities")
 @AllArgsConstructor
 @NoArgsConstructor
 public class TaskV2 {
