@@ -71,6 +71,13 @@
 			<artifactId>jjwt-jackson</artifactId>
 			<version>0.11.2</version>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/io.viascom.nanoid/nanoid -->
+		<dependency>
+			<groupId>io.viascom.nanoid</groupId>
+			<artifactId>nanoid</artifactId>
+			<version>1.0.1</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

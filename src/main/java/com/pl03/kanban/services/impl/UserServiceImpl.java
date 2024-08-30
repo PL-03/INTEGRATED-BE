@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.naming.AuthenticationException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -60,17 +61,23 @@ public class UserServiceImpl implements UserService {
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
 
-        // If validation passes, proceed with authentication
-        User user = userRepository.findByUsername(loginRequest.getUserName());
+        try {
+            User user = userRepository.findByUsername(loginRequest.getUserName());
 
-        if (user != null && passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
+            if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
+                throw new AuthenticationException("The username or password is incorrect.");
+            }
+
             // Generate JWT token
             String token = jwtTokenUtil.generateToken(user);
             return ResponseEntity.ok(Map.of("access_token", token));
-        } else {
+
+        } catch (AuthenticationException ex) {
+            // Handle the authentication error
             HttpServletRequest request = ((ServletRequestAttributes) Objects.requireNonNull(RequestContextHolder.getRequestAttributes())).getRequest();
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "The username or password is incorrect.", request.getRequestURI());
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), ex.getMessage(), request.getRequestURI());
             return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
         }
     }
+
 }
