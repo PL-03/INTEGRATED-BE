@@ -1,5 +1,6 @@
 package com.pl03.kanban.utils;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -9,16 +10,11 @@ import java.util.stream.Collectors;
 @Component
 public class ListMapper {
 
-    // Generic method for mapping a list of entities to DTOs
-    public <T, U> List<U> mapList(List<T> sourceList, Class<U> targetClass, Function<T, U> mapperFunction) {
-        return sourceList.stream()
-                .map(mapperFunction)
+    public <S, T> List<T> mapList(List<S> source, Class<T> targetClass, ModelMapper modelMapper) {
+        return source
+                .stream()
+                .map(element -> modelMapper.map(element, targetClass))
                 .collect(Collectors.toList());
-    }
-
-    // Generic method for mapping a single entity to a DTO
-    public static <T, U> U map(T source, Function<T, U> mapper) {
-        return mapper.apply(source);
     }
 }
 

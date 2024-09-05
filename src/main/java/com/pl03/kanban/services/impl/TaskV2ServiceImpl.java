@@ -27,7 +27,8 @@ public class TaskV2ServiceImpl implements TaskV2Service {
     private final ListMapper listMapper;
 
     @Autowired
-    public TaskV2ServiceImpl(TaskV2Repository taskV2Repository, StatusRepository statusRepository, ModelMapper modelMapper, ListMapper listMapper) {
+    public TaskV2ServiceImpl(TaskV2Repository taskV2Repository, StatusRepository statusRepository,
+                             ModelMapper modelMapper, ListMapper listMapper) {
         this.taskV2Repository = taskV2Repository;
         this.statusRepository = statusRepository;
         this.modelMapper = modelMapper;
@@ -52,11 +53,9 @@ public class TaskV2ServiceImpl implements TaskV2Service {
                     .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
             task.setStatus(status);
         }
-
         TaskV2 savedTask = taskV2Repository.save(task);
         return modelMapper.map(savedTask, AddEditTaskDto.class);
     }
-
 
     @Override
     public List<GetAllTaskDto> getAllTasks(String sortBy, List<String> filterStatuses) {
@@ -67,18 +66,15 @@ public class TaskV2ServiceImpl implements TaskV2Service {
             List<Status> filteredStatuses = statusRepository.findByNameIn(filterStatuses);
             tasks = taskV2Repository.findByStatusIn(filteredStatuses);
         } else if (!sortBy.equals("status.name")) {
-            throw new InvalidTaskFieldException("Invalid filter parameter");
+            throw new InvalidTaskFieldException("invalid filter parameter");
         } else if (filterStatuses == null || filterStatuses.isEmpty()) {
             tasks = taskV2Repository.findAll(Sort.by(Sort.Direction.ASC, sortBy));
         } else {
             List<Status> filteredStatuses = statusRepository.findByNameIn(filterStatuses);
             tasks = taskV2Repository.findByStatusIn(filteredStatuses, Sort.by(Sort.Direction.ASC, sortBy));
         }
-
-        // Use ListMapper to map tasks to GetAllTaskDto
-        return listMapper.mapList(tasks, GetAllTaskDto.class, task -> modelMapper.map(task, GetAllTaskDto.class));
+        return listMapper.mapList(tasks, GetAllTaskDto.class, modelMapper);
     }
-
 
     @Override
     public TaskV2 getTaskById(int id) {
@@ -90,7 +86,6 @@ public class TaskV2ServiceImpl implements TaskV2Service {
     public AddEditTaskDto deleteTaskById(int id) {
         TaskV2 task = taskV2Repository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
-
         taskV2Repository.delete(task);
         return modelMapper.map(task, AddEditTaskDto.class);
     }
@@ -106,6 +101,7 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         }
 
         modelMapper.map(addEditTaskDto, task);
+
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
                     .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
