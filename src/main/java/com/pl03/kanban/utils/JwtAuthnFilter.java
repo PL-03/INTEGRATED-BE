@@ -1,11 +1,10 @@
-package com.pl03.kanban.filters;
+package com.pl03.kanban.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.configs.JwtToken;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,8 +47,6 @@ public class JwtAuthnFilter extends OncePerRequestFilter {
             setErrorResponse(response, "Token has expired");
         } catch (MalformedJwtException e) {
             setErrorResponse(response, "Token is not well-formed");
-        } catch (SignatureException e) {
-            setErrorResponse(response, "Token has been tampered with");
         } catch (Exception e) {
             setErrorResponse(response, "Invalid token");
         }

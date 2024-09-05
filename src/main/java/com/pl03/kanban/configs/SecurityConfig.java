@@ -1,6 +1,6 @@
 package com.pl03.kanban.configs;
 
-import com.pl03.kanban.filters.JwtAuthnFilter;
+import com.pl03.kanban.utils.JwtAuthnFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
