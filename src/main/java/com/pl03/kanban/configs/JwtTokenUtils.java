@@ -1,21 +1,20 @@
 package com.pl03.kanban.configs;
 
 import com.pl03.kanban.user_entities.User;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
 
 import javax.crypto.SecretKey;
+import java.security.SignatureException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
-public class JwtToken {
+public class JwtTokenUtils {
 
     private SecretKey secretKey;
 
@@ -50,4 +49,19 @@ public class JwtToken {
                 .parseClaimsJws(token)
                 .getBody();
     }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(secretKey)
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (MalformedJwtException | ExpiredJwtException | UnsupportedJwtException | IllegalArgumentException e) {
+            // Token validation failed
+            return false;
+        }
+    }
+
+
 }

@@ -1,6 +1,7 @@
 package com.pl03.kanban.kanban_entities;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -37,10 +38,8 @@ public class TaskV2 {
     @Column(nullable = false, updatable = false, insertable = false)
     private Timestamp updatedOn;
 
-    public TaskV2(String title, String description, String assignees) {
-        this.title = title;
-        this.description = description;
-        this.assignees = assignees;
-        this.status = new Status(1, "No Status", null); // Set default status
-    }
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "boardId", nullable = false)
+    private Board board;
 }

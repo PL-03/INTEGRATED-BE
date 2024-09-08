@@ -11,6 +11,7 @@ public class AddEditTaskDto {
     private String description;
     private String assignees;
     private String status;
+    private String boardId;
 
     public void setTitle(String title) {
         this.title = title == null || title.trim().isEmpty() ? null : title.trim();

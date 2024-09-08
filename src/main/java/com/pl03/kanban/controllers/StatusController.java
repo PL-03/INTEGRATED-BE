@@ -15,7 +15,7 @@ import java.util.List;
                         "http://intproj23.sit.kmutt.ac.th/pl3/status",
                         "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
-@RequestMapping("/v2")
+@RequestMapping("/boards/{boardId}/statuses")
 public class StatusController {
 
     private final StatusService statusService;
@@ -25,39 +25,39 @@ public class StatusController {
         this.statusService = statusService;
     }
 
-    @GetMapping("/statuses")
-    public ResponseEntity<List<Status>> getAllStatuses() {
-        List<Status> statuses = statusService.getAllStatuses();
-        return ResponseEntity.ok(statuses);
-    }
-
-    @GetMapping("/statuses/{id}")
-    public ResponseEntity<Status> getStatusById(@PathVariable int id) {
-        Status status = statusService.getStatusById(id);
-        return ResponseEntity.ok(status);
-    }
-
-    @PostMapping("/statuses")
-    public ResponseEntity<Status> createStatus(@RequestBody Status status) {
-        Status createdStatus = statusService.createStatus(status);
+    @PostMapping
+    public ResponseEntity<Status> createStatus(@PathVariable String boardId, @RequestBody Status status) {
+        Status createdStatus = statusService.createStatus(boardId, status);
         return new ResponseEntity<>(createdStatus, HttpStatus.CREATED);
     }
 
-    @PutMapping("/statuses/{id}")
-    public ResponseEntity<Status> updateStatus(@RequestBody Status status, @PathVariable int id) {
-        Status updatedStatus = statusService.updateStatus(id, status);
-        return ResponseEntity.ok(updatedStatus);
+    @GetMapping
+    public ResponseEntity<List<Status>> getAllStatuses(@PathVariable String boardId) {
+        List<Status> statuses = statusService.getAllStatuses(boardId);
+        return new ResponseEntity<>(statuses, HttpStatus.OK);
     }
 
-    @DeleteMapping("/statuses/{id}")
-    public ResponseEntity<Status> deleteStatus(@PathVariable int id) {
-        Status deletedStatus = statusService.deleteStatus(id);
-        return ResponseEntity.ok(deletedStatus);
+    @GetMapping("/{id}")
+    public ResponseEntity<Status> getStatusById(@PathVariable String boardId, @PathVariable int id) {
+        Status status = statusService.getStatusById(boardId, id);
+        return new ResponseEntity<>(status, HttpStatus.OK);
     }
 
-    @DeleteMapping("/statuses/{id}/{newId}")
-    public ResponseEntity<Object> deleteStatusAndTransferTasks(@PathVariable int id, @PathVariable int newId) {
-        statusService.deleteStatusAndTransferTasks(id, newId);
-        return ResponseEntity.ok("[]");
+    @PutMapping("/{id}")
+    public ResponseEntity<Status> updateStatus(@PathVariable String boardId, @PathVariable int id, @RequestBody Status status) {
+        Status updatedStatus = statusService.updateStatus(boardId, id, status);
+        return new ResponseEntity<>(updatedStatus, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Status> deleteStatus(@PathVariable String boardId, @PathVariable int id) {
+        Status deletedStatus = statusService.deleteStatus(boardId, id);
+        return new ResponseEntity<>(deletedStatus, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}/transfer/{newStatusId}")
+    public ResponseEntity<Void> deleteStatusAndTransferTasks(@PathVariable String boardId, @PathVariable int id, @PathVariable int newStatusId) {
+        statusService.deleteStatusAndTransferTasks(boardId, id, newStatusId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }

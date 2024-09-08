@@ -1,8 +1,8 @@
-package com.pl03.kanban.utils;
+package com.pl03.kanban.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pl03.kanban.exceptions.ErrorResponse;
-import com.pl03.kanban.configs.JwtToken;
+import com.pl03.kanban.configs.JwtTokenUtils;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
@@ -16,12 +16,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-public class JwtAuthnFilter extends OncePerRequestFilter {
+public class JwtAuthzFilter extends OncePerRequestFilter {
 
-    private final JwtToken jwtToken;
+    private final JwtTokenUtils jwtTokenUtils;
 
-    public JwtAuthnFilter(JwtToken jwtToken) {
-        this.jwtToken = jwtToken;
+    public JwtAuthzFilter(JwtTokenUtils jwtTokenUtils) {
+        this.jwtTokenUtils = jwtTokenUtils;
     }
 
     @Override
@@ -37,7 +37,7 @@ public class JwtAuthnFilter extends OncePerRequestFilter {
 
             String token = authHeader.substring(7);
 
-            var claims = jwtToken.getClaimsFromToken(token);
+            var claims = jwtTokenUtils.getClaimsFromToken(token);
             var authentication = new UsernamePasswordAuthenticationToken(claims, null, null);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);

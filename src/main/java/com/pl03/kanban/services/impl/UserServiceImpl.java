@@ -1,6 +1,6 @@
 package com.pl03.kanban.services.impl;
 
-import com.pl03.kanban.configs.JwtToken;
+import com.pl03.kanban.configs.JwtTokenUtils;
 import com.pl03.kanban.dtos.UserDto;
 import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.services.UserService;
@@ -26,13 +26,13 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtToken jwtTokenUtil;
+    private final JwtTokenUtils jwtTokenUtilsUtil;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtToken jwtTokenUtil) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenUtils jwtTokenUtilsUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtTokenUtil = jwtTokenUtil;
+        this.jwtTokenUtilsUtil = jwtTokenUtilsUtil;
     }
 
     @Override
@@ -69,7 +69,7 @@ public class UserServiceImpl implements UserService {
             }
 
             // Generate JWT token
-            String token = jwtTokenUtil.generateToken(user);
+            String token = jwtTokenUtilsUtil.generateToken(user);
             return ResponseEntity.ok(Map.of("access_token", token));
 
         } catch (AuthenticationException ex) {

@@ -1,6 +1,6 @@
-package com.pl03.kanban.configs;
+package com.pl03.kanban.security;
 
-import com.pl03.kanban.utils.JwtAuthnFilter;
+import com.pl03.kanban.configs.JwtTokenUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,10 +17,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtToken jwtToken;
+    private final JwtTokenUtils jwtTokenUtils;
 
-    public SecurityConfig(JwtToken jwtToken) {
-        this.jwtToken = jwtToken;
+    public SecurityConfig(JwtTokenUtils jwtTokenUtils) {
+        this.jwtTokenUtils = jwtTokenUtils;
     }
 
     @Bean
@@ -34,7 +34,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .addFilterBefore(new JwtAuthnFilter(jwtToken), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtAuthzFilter(jwtTokenUtils), UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

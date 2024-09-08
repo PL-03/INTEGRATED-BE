@@ -4,12 +4,9 @@ import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
 import com.pl03.kanban.dtos.GetAllTaskDto;
+import com.pl03.kanban.kanban_entities.*;
 import com.pl03.kanban.utils.ListMapper;
-import com.pl03.kanban.kanban_entities.Status;
-import com.pl03.kanban.kanban_entities.TaskV2;
 import com.pl03.kanban.exceptions.InvalidTaskFieldException;
-import com.pl03.kanban.kanban_entities.StatusRepository;
-import com.pl03.kanban.kanban_entities.TaskV2Repository;
 import com.pl03.kanban.services.TaskV2Service;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,14 +22,23 @@ public class TaskV2ServiceImpl implements TaskV2Service {
     private final StatusRepository statusRepository;
     private final ModelMapper modelMapper;
     private final ListMapper listMapper;
+    private final BoardRepository boardRepository;
 
     @Autowired
     public TaskV2ServiceImpl(TaskV2Repository taskV2Repository, StatusRepository statusRepository,
-                             ModelMapper modelMapper, ListMapper listMapper) {
+                             ModelMapper modelMapper, ListMapper listMapper, BoardRepository boardRepository) {
         this.taskV2Repository = taskV2Repository;
         this.statusRepository = statusRepository;
         this.modelMapper = modelMapper;
         this.listMapper = listMapper;
+        this.boardRepository = boardRepository;
+
+        // Custom mapping for status name
+        modelMapper.typeMap(TaskV2.class, GetAllTaskDto.class).addMappings(mapper ->
+                mapper.map(src -> src.getStatus().getName(), GetAllTaskDto::setStatus));
+
+        modelMapper.typeMap(TaskV2.class, AddEditTaskDto.class).addMappings(mapper ->
+                mapper.map(src -> src.getStatus().getName(), AddEditTaskDto::setStatus));
     }
 
     private static final int MAX_TASK_TITLE_LENGTH = 100;
@@ -40,73 +46,93 @@ public class TaskV2ServiceImpl implements TaskV2Service {
     private static final int MAX_TASK_ASSIGNEES_LENGTH = 30;
 
     @Override
-    public AddEditTaskDto createTask(AddEditTaskDto addEditTaskDto) {
+    public AddEditTaskDto createTask(String boardId, AddEditTaskDto addEditTaskDto) {
+        // Validate task fields
         ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);
-
         if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
             throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
+        // Find the board by ID
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        // Map DTO to Task entity and associate it with the board
         TaskV2 task = modelMapper.map(addEditTaskDto, TaskV2.class);
+        task.setBoard(board);
+
+        // Set the status if provided
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
                     .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
             task.setStatus(status);
         }
+
         TaskV2 savedTask = taskV2Repository.save(task);
         return modelMapper.map(savedTask, AddEditTaskDto.class);
     }
 
     @Override
-    public List<GetAllTaskDto> getAllTasks(String sortBy, List<String> filterStatuses) {
+    public List<GetAllTaskDto> getAllTasks(String boardId, String sortBy, List<String> filterStatuses) {
         List<TaskV2> tasks;
+
         if (sortBy == null && (filterStatuses == null || filterStatuses.isEmpty())) {
-            tasks = taskV2Repository.findAll();
+            tasks = taskV2Repository.findByBoardBoardId(boardId);
         } else if (sortBy == null) {
-            List<Status> filteredStatuses = statusRepository.findByNameIn(filterStatuses);
-            tasks = taskV2Repository.findByStatusIn(filteredStatuses);
+            List<Status> filteredStatuses = statusRepository.findByNameInAndBoardBoardId(filterStatuses, boardId);
+            tasks = taskV2Repository.findByStatusInAndBoardBoardId(filteredStatuses, boardId);
         } else if (!sortBy.equals("status.name")) {
             throw new InvalidTaskFieldException("invalid filter parameter");
         } else if (filterStatuses == null || filterStatuses.isEmpty()) {
-            tasks = taskV2Repository.findAll(Sort.by(Sort.Direction.ASC, sortBy));
+            tasks = taskV2Repository.findByBoardBoardId(boardId, Sort.by(Sort.Direction.ASC, sortBy));
         } else {
-            List<Status> filteredStatuses = statusRepository.findByNameIn(filterStatuses);
-            tasks = taskV2Repository.findByStatusIn(filteredStatuses, Sort.by(Sort.Direction.ASC, sortBy));
+            List<Status> filteredStatuses = statusRepository.findByNameInAndBoardBoardId(filterStatuses, boardId);
+            tasks = taskV2Repository.findByStatusInAndBoardBoardId(filteredStatuses, boardId, Sort.by(Sort.Direction.ASC, sortBy));
         }
+
         return listMapper.mapList(tasks, GetAllTaskDto.class, modelMapper);
     }
 
     @Override
-    public TaskV2 getTaskById(int id) {
-        return taskV2Repository.findById(id)
-                .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
+    public TaskV2 getTaskById(String boardId, int taskId) {
+        return taskV2Repository.findByIdAndBoardBoardId(taskId, boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board " + boardId));
     }
 
     @Override
-    public AddEditTaskDto deleteTaskById(int id) {
-        TaskV2 task = taskV2Repository.findById(id)
-                .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
+    public AddEditTaskDto deleteTaskById(String boardId, int taskId) {
+        TaskV2 task = taskV2Repository.findByIdAndBoardBoardId(taskId, boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board " + boardId));
         taskV2Repository.delete(task);
         return modelMapper.map(task, AddEditTaskDto.class);
     }
 
     @Override
-    public AddEditTaskDto updateTask(AddEditTaskDto addEditTaskDto, int id) {
-        TaskV2 task = taskV2Repository.findById(id)
-                .orElseThrow(() -> new ItemNotFoundException("Task with id " + id + " does not exist"));
+    public AddEditTaskDto updateTask(String boardId, int taskId, AddEditTaskDto addEditTaskDto) {
+        // Find the task by ID
+        TaskV2 task = taskV2Repository.findByIdAndBoardBoardId(taskId, boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board " + boardId));
 
+        // Validate task fields
         ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);
         if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
             throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
+        // Update task details
         modelMapper.map(addEditTaskDto, task);
 
+        // Set the status if provided
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
                     .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
             task.setStatus(status);
         }
+
+        // Ensure the task is associated with the correct board
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+        task.setBoard(board);
 
         TaskV2 updatedTask = taskV2Repository.save(task);
         return modelMapper.map(updatedTask, AddEditTaskDto.class);
@@ -149,3 +175,4 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         return errorResponse;
     }
 }
+
