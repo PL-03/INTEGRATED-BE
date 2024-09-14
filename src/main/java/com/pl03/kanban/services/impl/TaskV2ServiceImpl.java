@@ -61,19 +61,28 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         TaskV2 task = modelMapper.map(addEditTaskDto, TaskV2.class);
         task.setBoard(board);
 
-        // Set the status if provided
-        if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
-            Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
-                    .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
-            task.setStatus(status);
+        // Set the status to "No Status" (ID 1) if the status field is null or empty
+        Status status;
+        if (addEditTaskDto.getStatus() == null || addEditTaskDto.getStatus().isEmpty()) {
+            status = statusRepository.findById(1)
+                    .orElseThrow(() -> new ItemNotFoundException("Default status 'No Status' with id 1 does not exist"));
+        } else {
+            status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
+                    .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist in board id: " + boardId));
         }
+        task.setStatus(status);
 
         TaskV2 savedTask = taskV2Repository.save(task);
         return modelMapper.map(savedTask, AddEditTaskDto.class);
     }
 
+
     @Override
     public List<GetAllTaskDto> getAllTasks(String boardId, String sortBy, List<String> filterStatuses) {
+        //find board first
+        boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
         List<TaskV2> tasks;
 
         if (sortBy == null && (filterStatuses == null || filterStatuses.isEmpty())) {
@@ -94,15 +103,24 @@ public class TaskV2ServiceImpl implements TaskV2Service {
     }
 
     @Override
-    public TaskV2 getTaskById(String boardId, int taskId) {
-        return taskV2Repository.findByIdAndBoardBoardId(taskId, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board " + boardId));
+    public AddEditTaskDto getTaskById(String boardId, int taskId) {
+        boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        TaskV2 task = taskV2Repository.findByIdAndBoardBoardId(taskId, boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
+
+        // Map the entity to AddEditTaskDto and return
+        return modelMapper.map(task, AddEditTaskDto.class);
     }
 
     @Override
     public AddEditTaskDto deleteTaskById(String boardId, int taskId) {
+        boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
         TaskV2 task = taskV2Repository.findByIdAndBoardBoardId(taskId, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board " + boardId));
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
         taskV2Repository.delete(task);
         return modelMapper.map(task, AddEditTaskDto.class);
     }
@@ -115,7 +133,7 @@ public class TaskV2ServiceImpl implements TaskV2Service {
 
         // Check if the task exists in the board
         TaskV2 task = taskV2Repository.findByIdAndBoardBoardId(taskId, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board " + boardId));
+                .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
 
         // Validate task fields
         ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);
@@ -129,7 +147,7 @@ public class TaskV2ServiceImpl implements TaskV2Service {
         // Set the status if provided
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             Status status = statusRepository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
-                    .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
+                    .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist in board id: " + boardId));
             task.setStatus(status);
         }
 

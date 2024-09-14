@@ -42,9 +42,9 @@ public class TaskController {
     }
 
     @GetMapping("/{taskId}")
-    public ResponseEntity<TaskV2> getTaskById(@PathVariable String id, @PathVariable int taskId) {
-        TaskV2 task = taskV2Service.getTaskById(id, taskId);
-        return ResponseEntity.ok(task);
+    public ResponseEntity<AddEditTaskDto> getTaskById(@PathVariable String id, @PathVariable int taskId) {
+        AddEditTaskDto taskDto = taskV2Service.getTaskById(id, taskId);
+        return ResponseEntity.ok(taskDto);
     }
 
     @PutMapping("/{taskId}")

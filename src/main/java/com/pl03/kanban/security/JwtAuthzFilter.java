@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import io.jsonwebtoken.security.SignatureException;
 
 public class JwtAuthzFilter extends OncePerRequestFilter {
 
@@ -37,21 +38,29 @@ public class JwtAuthzFilter extends OncePerRequestFilter {
 
             String token = authHeader.substring(7);
 
+            // Validate the token before extracting claims
+            if (!jwtTokenUtils.validateToken(token)) {
+                setErrorResponse(response, "Invalid or tampered token");
+                return;
+            }
+
             var claims = jwtTokenUtils.getClaimsFromToken(token);
             var authentication = new UsernamePasswordAuthenticationToken(claims, null, null);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response); // Continue if token is valid
         } catch (ExpiredJwtException e) {
             setErrorResponse(response, "Token has expired");
         } catch (MalformedJwtException e) {
             setErrorResponse(response, "Token is not well-formed");
+        } catch (SignatureException e) {
+            setErrorResponse(response, "JWT token has been tampered with");
+        } catch (IllegalArgumentException e) {
+            setErrorResponse(response, "JWT token compact of handler are invalid");
+        } catch (Exception e) {
+            setErrorResponse(response, "An error occurred while processing the JWT");
         }
-//        catch (Exception e) {
-//            // Handle other unexpected exceptions
-//            setErrorResponse(response, "An error occurred while processing the JWT");
-//        }
     }
 
     private void setErrorResponse(HttpServletResponse response, String message) throws IOException {

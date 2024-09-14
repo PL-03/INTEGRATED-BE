@@ -57,11 +57,20 @@ public class JwtTokenUtils {
                     .build()
                     .parseClaimsJws(token);
             return true;
-        } catch (MalformedJwtException | ExpiredJwtException | UnsupportedJwtException | IllegalArgumentException e) {
-            // Token validation failed
-            return false;
+        } catch (MalformedJwtException e) {
+            // Log the specific error for better debugging
+            System.out.println("Malformed JWT: " + e.getMessage());
+        } catch (ExpiredJwtException e) {
+            System.out.println("Expired JWT: " + e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            System.out.println("Unsupported JWT: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("JWT validation failed: " + e.getMessage());
         }
+        // Token validation failed
+        return false;
     }
+
 
 
 }

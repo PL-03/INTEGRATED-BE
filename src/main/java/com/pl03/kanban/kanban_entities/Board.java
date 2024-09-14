@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import lombok.experimental.FieldNameConstants;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.util.LinkedHashSet;
@@ -17,6 +18,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@FieldNameConstants
 @Table(name = "board", schema = "kanban_entities")
 public class Board {
     @Id

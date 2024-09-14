@@ -44,6 +44,10 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public List<StatusDto> getAllStatuses(String boardId) {
+        //find board first
+        boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
         List<Status> statuses = statusRepository.findByBoardBoardId(boardId);
         return listMapper.mapList(statuses, StatusDto.class, modelMapper);
     }
@@ -51,8 +55,11 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto getStatusById(String boardId, int id) {
+        boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
         Status status = statusRepository.findByIdAndBoardBoardId(id, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board " + boardId));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
         return modelMapper.map(status, StatusDto.class);
     }
 
@@ -76,8 +83,11 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto updateStatus(String boardId, int id, StatusDto updatedStatusDto) {
+        boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
         Status status = statusRepository.findByIdAndBoardBoardId(id, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board " + boardId));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
         ErrorResponse errorResponse = validateStatusFields(updatedStatusDto.getName(), updatedStatusDto.getDescription(), id, boardId);
 
@@ -103,8 +113,11 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto deleteStatus(String boardId, int id) {
+        boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
         Status status = statusRepository.findByIdAndBoardBoardId(id, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board " + boardId));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
         if (isStatusNameDefault(status.getName())) {
             throw new InvalidStatusFieldException(status.getName() + " cannot be deleted");
@@ -121,10 +134,13 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public void deleteStatusAndTransferTasks(String boardId, int id, int newStatusId) {
+        boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
         Status currentStatus = statusRepository.findByIdAndBoardBoardId(id, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board " + boardId));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
         Status newStatus = statusRepository.findByIdAndBoardBoardId(newStatusId, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Status with id " + newStatusId + " does not exist in board " + boardId));
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + newStatusId + " does not exist in board id: " + boardId));
 
         if (isStatusNameDefault(currentStatus.getName())) {
             throw new InvalidStatusFieldException(currentStatus.getName() + " cannot be deleted");

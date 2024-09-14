@@ -42,6 +42,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return getResponseForFieldsValidation(request, ex.getMessage(), ex.getErrors(), HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(InvalidBoardFieldException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidBoardFieldException(InvalidBoardFieldException ex, WebRequest request) {
+        return getResponseForFieldsValidation(request, ex.getMessage(), ex.getErrors(), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler({JwtException.class, AuthenticationException.class})
     public ResponseEntity<ErrorResponse> handleJwtExceptions(Exception ex, WebRequest request) {
         HttpStatus status = HttpStatus.UNAUTHORIZED;
