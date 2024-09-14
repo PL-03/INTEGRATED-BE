@@ -47,9 +47,11 @@ public class JwtAuthzFilter extends OncePerRequestFilter {
             setErrorResponse(response, "Token has expired");
         } catch (MalformedJwtException e) {
             setErrorResponse(response, "Token is not well-formed");
-        } catch (Exception e) {
-            setErrorResponse(response, "Invalid token");
         }
+//        catch (Exception e) {
+//            // Handle other unexpected exceptions
+//            setErrorResponse(response, "An error occurred while processing the JWT");
+//        }
     }
 
     private void setErrorResponse(HttpServletResponse response, String message) throws IOException {

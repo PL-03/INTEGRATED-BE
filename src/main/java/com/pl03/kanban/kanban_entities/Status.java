@@ -27,7 +27,7 @@ public class Status {
     private String description;
 
     @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne
     @JoinColumn(name = "boardId", nullable = false)
     private Board board;
 

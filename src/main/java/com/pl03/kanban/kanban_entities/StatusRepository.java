@@ -13,4 +13,6 @@ public interface StatusRepository extends JpaRepository<Status, Integer> {
     List<Status> findByNameIgnoreCaseAndIdNot(String name, int id);
     List<Status> findByBoardBoardId(String boardId);
     Optional<Status> findByIdAndBoardBoardId(int id, String boardId);
+
+    boolean existsByNameIgnoreCaseAndBoardBoardId(String name, String board_boardId);
 }

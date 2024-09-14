@@ -109,7 +109,11 @@ public class TaskV2ServiceImpl implements TaskV2Service {
 
     @Override
     public AddEditTaskDto updateTask(String boardId, int taskId, AddEditTaskDto addEditTaskDto) {
-        // Find the task by ID
+        // First, check if the board exists
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        // Check if the task exists in the board
         TaskV2 task = taskV2Repository.findByIdAndBoardBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board " + boardId));
 
@@ -119,7 +123,7 @@ public class TaskV2ServiceImpl implements TaskV2Service {
             throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
-        // Update task details
+        // Update task details using ModelMapper
         modelMapper.map(addEditTaskDto, task);
 
         // Set the status if provided
@@ -129,14 +133,16 @@ public class TaskV2ServiceImpl implements TaskV2Service {
             task.setStatus(status);
         }
 
-        // Ensure the task is associated with the correct board
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+        // No change to boardId - keep the task associated with the current board
         task.setBoard(board);
 
+        // Save the updated task
         TaskV2 updatedTask = taskV2Repository.save(task);
+
+        // Return the mapped DTO
         return modelMapper.map(updatedTask, AddEditTaskDto.class);
     }
+
 
     private ErrorResponse validateTaskFields(AddEditTaskDto addEditTaskDto) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details", "");

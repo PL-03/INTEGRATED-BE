@@ -39,7 +39,7 @@ public class TaskV2 {
     private Timestamp updatedOn;
 
     @NotNull
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne
     @JoinColumn(name = "boardId", nullable = false)
     private Board board;
 }

@@ -1,5 +1,6 @@
 package com.pl03.kanban.controllers;
 
+import com.pl03.kanban.dtos.StatusDto;
 import com.pl03.kanban.kanban_entities.Status;
 import com.pl03.kanban.services.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,7 @@ import java.util.List;
                         "http://intproj23.sit.kmutt.ac.th/pl3/status",
                         "http://ip23pl3.sit.kmutt.ac.th"})
 @RestController
-@RequestMapping("/boards/{boardId}/statuses")
+@RequestMapping("/v3/boards/{boardId}/statuses")
 public class StatusController {
 
     private final StatusService statusService;
@@ -26,38 +27,38 @@ public class StatusController {
     }
 
     @PostMapping
-    public ResponseEntity<Status> createStatus(@PathVariable String boardId, @RequestBody Status status) {
-        Status createdStatus = statusService.createStatus(boardId, status);
+    public ResponseEntity<StatusDto> createStatus(@PathVariable String boardId, @RequestBody StatusDto status) {
+        StatusDto createdStatus = statusService.createStatus(boardId, status);
         return new ResponseEntity<>(createdStatus, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<List<Status>> getAllStatuses(@PathVariable String boardId) {
-        List<Status> statuses = statusService.getAllStatuses(boardId);
+    public ResponseEntity<List<StatusDto>> getAllStatuses(@PathVariable String boardId) {
+        List<StatusDto> statuses = statusService.getAllStatuses(boardId);
         return new ResponseEntity<>(statuses, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Status> getStatusById(@PathVariable String boardId, @PathVariable int id) {
-        Status status = statusService.getStatusById(boardId, id);
+    public ResponseEntity<StatusDto> getStatusById(@PathVariable String boardId, @PathVariable int id) {
+        StatusDto status = statusService.getStatusById(boardId, id);
         return new ResponseEntity<>(status, HttpStatus.OK);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Status> updateStatus(@PathVariable String boardId, @PathVariable int id, @RequestBody Status status) {
-        Status updatedStatus = statusService.updateStatus(boardId, id, status);
+    public ResponseEntity<StatusDto> updateStatus(@PathVariable String boardId, @PathVariable int id, @RequestBody StatusDto status) {
+        StatusDto updatedStatus = statusService.updateStatus(boardId, id, status);
         return new ResponseEntity<>(updatedStatus, HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Status> deleteStatus(@PathVariable String boardId, @PathVariable int id) {
-        Status deletedStatus = statusService.deleteStatus(boardId, id);
+    public ResponseEntity<StatusDto> deleteStatus(@PathVariable String boardId, @PathVariable int id) {
+        StatusDto deletedStatus = statusService.deleteStatus(boardId, id);
         return new ResponseEntity<>(deletedStatus, HttpStatus.OK);
     }
 
-    @DeleteMapping("/{id}/transfer/{newStatusId}")
+    @DeleteMapping("/{id}/{newStatusId}")
     public ResponseEntity<Void> deleteStatusAndTransferTasks(@PathVariable String boardId, @PathVariable int id, @PathVariable int newStatusId) {
         statusService.deleteStatusAndTransferTasks(boardId, id, newStatusId);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

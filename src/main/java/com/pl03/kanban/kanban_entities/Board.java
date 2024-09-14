@@ -41,8 +41,10 @@ public class Board {
 
     @PrePersist
     public void prePersist() {
-        if (boardId == null) {
-            boardId = NanoId.generate(10);
-        }
+        generateUniqueId();
+    }
+
+    public void generateUniqueId() {
+        this.boardId = NanoId.generate(10);
     }
 }
