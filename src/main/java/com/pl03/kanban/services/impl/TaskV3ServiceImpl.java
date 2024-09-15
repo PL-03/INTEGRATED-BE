@@ -147,10 +147,14 @@ public class TaskV3ServiceImpl implements TaskV3Service {
             throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
+
         // Update task fields only if the new values are not null or empty (using the setters in AddEditTaskDto)
         task.setTitle(addEditTaskDto.getTitle() == null ? task.getTitle() : addEditTaskDto.getTitle().trim());
-        task.setDescription(addEditTaskDto.getDescription() == null ? task.getDescription() : addEditTaskDto.getDescription().trim());
-        task.setAssignees(addEditTaskDto.getAssignees() == null ? task.getAssignees() : addEditTaskDto.getAssignees().trim());
+        // Set description: If it's null, set to null to allow deletion
+        task.setDescription(addEditTaskDto.getDescription() != null ? addEditTaskDto.getDescription().trim() : null);
+
+        // Set assignees: If it's null, set to null to allow deletion
+        task.setAssignees(addEditTaskDto.getAssignees() != null ? addEditTaskDto.getAssignees().trim() : null);
 
         // Set the status if provided
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
