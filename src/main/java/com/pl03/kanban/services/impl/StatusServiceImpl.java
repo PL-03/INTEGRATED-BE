@@ -17,8 +17,8 @@ import java.util.*;
 @Service
 public class StatusServiceImpl implements StatusService {
 
-    private final StatusRepository statusRepository;
-    private final TaskV2Repository taskV2Repository;
+    private final StatusV3Repository statusV3Repository;
+    private final TaskV3Repository taskV3Repository;
     private final BoardRepository boardRepository;
     private final ListMapper listMapper;
     private final ModelMapper modelMapper;
@@ -28,9 +28,9 @@ public class StatusServiceImpl implements StatusService {
     private static final int MAX_STATUS_DESCRIPTION_LENGTH = 200;
 
     @Autowired
-    public StatusServiceImpl(StatusRepository statusRepository, TaskV2Repository taskV2Repository, BoardRepository boardRepository, ListMapper listMapper, ModelMapper modelMapper) {
-        this.statusRepository = statusRepository;
-        this.taskV2Repository = taskV2Repository;
+    public StatusServiceImpl(StatusV3Repository statusV3Repository, TaskV3Repository taskV3Repository, BoardRepository boardRepository, ListMapper listMapper, ModelMapper modelMapper) {
+        this.statusV3Repository = statusV3Repository;
+        this.taskV3Repository = taskV3Repository;
         this.boardRepository = boardRepository;
         this.listMapper = listMapper;
         this.modelMapper = modelMapper;
@@ -48,7 +48,7 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        List<StatusV3> statusV3s = statusRepository.findByBoardBoardId(boardId);
+        List<StatusV3> statusV3s = statusV3Repository.findByBoardBoardId(boardId);
         return listMapper.mapList(statusV3s, StatusDto.class, modelMapper);
     }
 
@@ -58,7 +58,7 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        StatusV3 statusV3 = statusRepository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
         return modelMapper.map(statusV3, StatusDto.class);
     }
@@ -77,7 +77,7 @@ public class StatusServiceImpl implements StatusService {
 
         StatusV3 statusV3 = modelMapper.map(statusDto, StatusV3.class);
         statusV3.setBoard(board);
-        StatusV3 savedStatusV3 = statusRepository.save(statusV3);
+        StatusV3 savedStatusV3 = statusV3Repository.save(statusV3);
         return modelMapper.map(savedStatusV3, StatusDto.class);
     }
 
@@ -86,7 +86,7 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        StatusV3 statusV3 = statusRepository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
         ErrorResponse errorResponse = validateStatusFields(updatedStatusDto.getName(), updatedStatusDto.getDescription(), id, boardId);
@@ -106,7 +106,7 @@ public class StatusServiceImpl implements StatusService {
         statusV3.setName(updatedStatusDto.getName() == null || updatedStatusDto.getName().trim().isEmpty() ? statusV3.getName()
                 : updatedStatusDto.getName().trim());
         statusV3.setDescription(updatedStatusDto.getDescription());
-        StatusV3 updatedStatusV3 = statusRepository.save(statusV3);
+        StatusV3 updatedStatusV3 = statusV3Repository.save(statusV3);
         return modelMapper.map(updatedStatusV3, StatusDto.class);
     }
 
@@ -116,19 +116,19 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        StatusV3 statusV3 = statusRepository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
         if (isStatusNameDefault(statusV3.getName())) {
             throw new InvalidStatusFieldException(statusV3.getName() + " cannot be deleted");
         }
 
-        List<TaskV3> tasksWithStatus = taskV2Repository.findByStatus(statusV3);
+        List<TaskV3> tasksWithStatus = taskV3Repository.findByStatusV3(statusV3);
         if (!tasksWithStatus.isEmpty()) {
             throw new InvalidStatusFieldException("Destination status for task transfer not specified");
         }
 
-        statusRepository.delete(statusV3);
+        statusV3Repository.delete(statusV3);
         return modelMapper.map(statusV3, StatusDto.class);
     }
 
@@ -137,9 +137,9 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        StatusV3 currentStatusV3 = statusRepository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 currentStatusV3 = statusV3Repository.findByIdAndBoardBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
-        StatusV3 newStatusV3 = statusRepository.findByIdAndBoardBoardId(newStatusId, boardId)
+        StatusV3 newStatusV3 = statusV3Repository.findByIdAndBoardBoardId(newStatusId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + newStatusId + " does not exist in board id: " + boardId));
 
         if (isStatusNameDefault(currentStatusV3.getName())) {
@@ -150,11 +150,11 @@ public class StatusServiceImpl implements StatusService {
             throw new InvalidStatusFieldException("destination status for task transfer must be different from current status");
         }
 
-        List<TaskV3> tasksWithCurrentStatus = taskV2Repository.findByStatus(currentStatusV3);
+        List<TaskV3> tasksWithCurrentStatus = taskV3Repository.findByStatusV3(currentStatusV3);
         tasksWithCurrentStatus.forEach(task -> task.setStatusV3(newStatusV3));
-        taskV2Repository.saveAll(tasksWithCurrentStatus);
+        taskV3Repository.saveAll(tasksWithCurrentStatus);
 
-        statusRepository.delete(currentStatusV3);
+        statusV3Repository.delete(currentStatusV3);
     }
 
 
@@ -165,7 +165,7 @@ public class StatusServiceImpl implements StatusService {
             errorResponse.addValidationError(StatusV3.Fields.name, "must not be null");
         } else if (name.trim().length() > MAX_STATUS_NAME_LENGTH) {
             errorResponse.addValidationError(StatusV3.Fields.name, "size must be between 0 and " + MAX_STATUS_NAME_LENGTH);
-        } else if (statusRepository.existsByNameIgnoreCaseAndBoardBoardId(name, boardId)) {
+        } else if (statusV3Repository.existsByNameIgnoreCaseAndBoardBoardId(name, boardId)) {
             errorResponse.addValidationError(StatusV3.Fields.name, "Status name must be unique within the board");
         }
 
@@ -191,6 +191,6 @@ public class StatusServiceImpl implements StatusService {
         );
 
         // Save all the default statuses to the database
-        statusRepository.saveAll(defaultStatusV3s);
+        statusV3Repository.saveAll(defaultStatusV3s);
     }
 }

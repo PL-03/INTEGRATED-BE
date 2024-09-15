@@ -18,13 +18,13 @@ SET TIME_ZONE = '+00:00';
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `status`
+-- Table structure for table `statusV3`
 --
 
-DROP TABLE IF EXISTS `status`;
+DROP TABLE IF EXISTS `statusV3`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `status` (
+CREATE TABLE `statusV3` (
   `statusId` int NOT NULL AUTO_INCREMENT,
   `statusName` varchar(50) NOT NULL,
   `statusDescription` varchar(200) DEFAULT NULL,
@@ -34,13 +34,13 @@ CREATE TABLE `status` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `status`
+-- Dumping data for table `statusV3`
 --
 
-LOCK TABLES `status` WRITE;
-/*!40000 ALTER TABLE `status` DISABLE KEYS */;
-INSERT INTO `status` VALUES (1,'No Status','The default status'),(2,'To Do',NULL),(3,'Doing','Being worked on'),(4,'Done','Finished');
-/*!40000 ALTER TABLE `status` ENABLE KEYS */;
+LOCK TABLES `statusV3` WRITE;
+/*!40000 ALTER TABLE `statusV3` DISABLE KEYS */;
+INSERT INTO `statusV3` VALUES (1,'No Status','The default statusV3'),(2,'To Do',NULL),(3,'Doing','Being worked on'),(4,'Done','Finished');
+/*!40000 ALTER TABLE `statusV3` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -90,7 +90,7 @@ CREATE TABLE `taskv2` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `fk_taskv2_taskStatus_idx` (`taskStatusId`),
-  CONSTRAINT `fk_taskv2_taskStatus` FOREIGN KEY (`taskStatusId`) REFERENCES `status` (`statusId`)
+  CONSTRAINT `fk_taskv2_taskStatus` FOREIGN KEY (`taskStatusId`) REFERENCES `statusV3` (`statusId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface StatusRepository extends JpaRepository<StatusV3, Integer> {
+public interface StatusV3Repository extends JpaRepository<StatusV3, Integer> {
     List<StatusV3> findByNameInAndBoardBoardId(List<String> names, String boardId);
     List<StatusV3> findByNameIgnoreCaseAndIdNot(String name, int id);
     List<StatusV3> findByBoardBoardId(String boardId);
