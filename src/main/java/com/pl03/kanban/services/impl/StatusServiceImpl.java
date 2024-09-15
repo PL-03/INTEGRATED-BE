@@ -48,8 +48,8 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        List<Status> statuses = statusRepository.findByBoardBoardId(boardId);
-        return listMapper.mapList(statuses, StatusDto.class, modelMapper);
+        List<StatusV3> statusV3s = statusRepository.findByBoardBoardId(boardId);
+        return listMapper.mapList(statusV3s, StatusDto.class, modelMapper);
     }
 
 
@@ -58,9 +58,9 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        Status status = statusRepository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusRepository.findByIdAndBoardBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
-        return modelMapper.map(status, StatusDto.class);
+        return modelMapper.map(statusV3, StatusDto.class);
     }
 
 
@@ -75,10 +75,10 @@ public class StatusServiceImpl implements StatusService {
             throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
-        Status status = modelMapper.map(statusDto, Status.class);
-        status.setBoard(board);
-        Status savedStatus = statusRepository.save(status);
-        return modelMapper.map(savedStatus, StatusDto.class);
+        StatusV3 statusV3 = modelMapper.map(statusDto, StatusV3.class);
+        statusV3.setBoard(board);
+        StatusV3 savedStatusV3 = statusRepository.save(statusV3);
+        return modelMapper.map(savedStatusV3, StatusDto.class);
     }
 
     @Override
@@ -86,16 +86,16 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        Status status = statusRepository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusRepository.findByIdAndBoardBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
         ErrorResponse errorResponse = validateStatusFields(updatedStatusDto.getName(), updatedStatusDto.getDescription(), id, boardId);
 
-        if (isStatusNameDefault(status.getName())) {
+        if (isStatusNameDefault(statusV3.getName())) {
             if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
-                throw new InvalidStatusFieldException(status.getName() + " cannot be modified", errorResponse.getErrors());
+                throw new InvalidStatusFieldException(statusV3.getName() + " cannot be modified", errorResponse.getErrors());
             } else {
-                throw new InvalidStatusFieldException(status.getName() + " cannot be modified");
+                throw new InvalidStatusFieldException(statusV3.getName() + " cannot be modified");
             }
         }
 
@@ -103,11 +103,11 @@ public class StatusServiceImpl implements StatusService {
             throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
-        status.setName(updatedStatusDto.getName() == null || updatedStatusDto.getName().trim().isEmpty() ? status.getName()
+        statusV3.setName(updatedStatusDto.getName() == null || updatedStatusDto.getName().trim().isEmpty() ? statusV3.getName()
                 : updatedStatusDto.getName().trim());
-        status.setDescription(updatedStatusDto.getDescription());
-        Status updatedStatus = statusRepository.save(status);
-        return modelMapper.map(updatedStatus, StatusDto.class);
+        statusV3.setDescription(updatedStatusDto.getDescription());
+        StatusV3 updatedStatusV3 = statusRepository.save(statusV3);
+        return modelMapper.map(updatedStatusV3, StatusDto.class);
     }
 
 
@@ -116,20 +116,20 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        Status status = statusRepository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusRepository.findByIdAndBoardBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
-        if (isStatusNameDefault(status.getName())) {
-            throw new InvalidStatusFieldException(status.getName() + " cannot be deleted");
+        if (isStatusNameDefault(statusV3.getName())) {
+            throw new InvalidStatusFieldException(statusV3.getName() + " cannot be deleted");
         }
 
-        List<TaskV2> tasksWithStatus = taskV2Repository.findByStatus(status);
+        List<TaskV3> tasksWithStatus = taskV2Repository.findByStatus(statusV3);
         if (!tasksWithStatus.isEmpty()) {
             throw new InvalidStatusFieldException("Destination status for task transfer not specified");
         }
 
-        statusRepository.delete(status);
-        return modelMapper.map(status, StatusDto.class);
+        statusRepository.delete(statusV3);
+        return modelMapper.map(statusV3, StatusDto.class);
     }
 
     @Override
@@ -137,24 +137,24 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        Status currentStatus = statusRepository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 currentStatusV3 = statusRepository.findByIdAndBoardBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
-        Status newStatus = statusRepository.findByIdAndBoardBoardId(newStatusId, boardId)
+        StatusV3 newStatusV3 = statusRepository.findByIdAndBoardBoardId(newStatusId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + newStatusId + " does not exist in board id: " + boardId));
 
-        if (isStatusNameDefault(currentStatus.getName())) {
-            throw new InvalidStatusFieldException(currentStatus.getName() + " cannot be deleted");
+        if (isStatusNameDefault(currentStatusV3.getName())) {
+            throw new InvalidStatusFieldException(currentStatusV3.getName() + " cannot be deleted");
         }
 
         if (id == newStatusId) {
             throw new InvalidStatusFieldException("destination status for task transfer must be different from current status");
         }
 
-        List<TaskV2> tasksWithCurrentStatus = taskV2Repository.findByStatus(currentStatus);
-        tasksWithCurrentStatus.forEach(task -> task.setStatus(newStatus));
+        List<TaskV3> tasksWithCurrentStatus = taskV2Repository.findByStatus(currentStatusV3);
+        tasksWithCurrentStatus.forEach(task -> task.setStatusV3(newStatusV3));
         taskV2Repository.saveAll(tasksWithCurrentStatus);
 
-        statusRepository.delete(currentStatus);
+        statusRepository.delete(currentStatusV3);
     }
 
 
@@ -162,15 +162,15 @@ public class StatusServiceImpl implements StatusService {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details", "");
 
         if (name == null || name.trim().isEmpty()) {
-            errorResponse.addValidationError(Status.Fields.name, "must not be null");
+            errorResponse.addValidationError(StatusV3.Fields.name, "must not be null");
         } else if (name.trim().length() > MAX_STATUS_NAME_LENGTH) {
-            errorResponse.addValidationError(Status.Fields.name, "size must be between 0 and " + MAX_STATUS_NAME_LENGTH);
+            errorResponse.addValidationError(StatusV3.Fields.name, "size must be between 0 and " + MAX_STATUS_NAME_LENGTH);
         } else if (statusRepository.existsByNameIgnoreCaseAndBoardBoardId(name, boardId)) {
-            errorResponse.addValidationError(Status.Fields.name, "Status name must be unique within the board");
+            errorResponse.addValidationError(StatusV3.Fields.name, "Status name must be unique within the board");
         }
 
         if (description != null && description.trim().length() > MAX_STATUS_DESCRIPTION_LENGTH) {
-            errorResponse.addValidationError(Status.Fields.description, "size must be between 0 and " + MAX_STATUS_DESCRIPTION_LENGTH);
+            errorResponse.addValidationError(StatusV3.Fields.description, "size must be between 0 and " + MAX_STATUS_DESCRIPTION_LENGTH);
         }
 
         return errorResponse.getErrors().isEmpty() ? null : errorResponse;
@@ -182,15 +182,15 @@ public class StatusServiceImpl implements StatusService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        List<Status> defaultStatuses = Arrays.asList(
-                new Status(0, "No Status", "A status has not been assigned", board),
-                new Status(0, "To Do", "The task is included in the project", board),
-                new Status(0, "Doing", "The task is being worked on", board),
-                new Status(0, "Done", "The task has been completed", board)
+        // Use the constructor without timestamps
+        List<StatusV3> defaultStatusV3s = Arrays.asList(
+                new StatusV3(0, "No Status", "A status has not been assigned", board),
+                new StatusV3(0, "To Do", "The task is included in the project", board),
+                new StatusV3(0, "Doing", "The task is being worked on", board),
+                new StatusV3(0, "Done", "The task has been completed", board)
         );
 
         // Save all the default statuses to the database
-        statusRepository.saveAll(defaultStatuses);
+        statusRepository.saveAll(defaultStatusV3s);
     }
-
 }

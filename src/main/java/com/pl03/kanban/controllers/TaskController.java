@@ -2,8 +2,7 @@ package com.pl03.kanban.controllers;
 
 import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
-import com.pl03.kanban.kanban_entities.TaskV2;
-import com.pl03.kanban.services.TaskV2Service;
+import com.pl03.kanban.services.TaskV3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,10 +18,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/v3/boards/{id}/tasks")
 public class TaskController {
-    private final TaskV2Service taskV2Service;
+    private final TaskV3Service taskV2Service;
 
     @Autowired
-    public TaskController(TaskV2Service taskV2Service) {
+    public TaskController(TaskV3Service taskV2Service) {
         this.taskV2Service = taskV2Service;
     }
 

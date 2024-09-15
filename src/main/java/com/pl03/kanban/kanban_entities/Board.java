@@ -6,11 +6,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import lombok.experimental.FieldNameConstants;
-import org.hibernate.annotations.GenericGenerator;
 
-import java.util.LinkedHashSet;
+import java.sql.Timestamp;
 import java.util.List;
-import java.util.Set;
 
 @Getter
 @Setter
@@ -36,10 +34,16 @@ public class Board {
     private String oid;
 
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TaskV2> tasks;
+    private List<TaskV3> tasks;
 
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Status> statuses;
+    private List<StatusV3> statusV3s;
+
+    @Column(nullable = false, updatable = false, insertable = false)
+    private Timestamp createdOn;
+
+    @Column(nullable = false, updatable = false, insertable = false)
+    private Timestamp updatedOn;
 
     @PrePersist
     public void prePersist() {

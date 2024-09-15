@@ -13,7 +13,7 @@ import java.sql.Timestamp;
 @Table(name = "taskv2", schema = "kanban_entities")
 @AllArgsConstructor
 @NoArgsConstructor
-public class TaskV2 {
+public class TaskV3 {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,7 +30,7 @@ public class TaskV2 {
 
     @ManyToOne
     @JoinColumn(name = "taskStatusId", referencedColumnName = "statusId", nullable = false)
-    private Status status;
+    private StatusV3 statusV3;
 
     @Column(nullable = false, updatable = false, insertable = false)
     private Timestamp createdOn;

@@ -8,16 +8,16 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface TaskV2Repository extends JpaRepository<TaskV2, Integer> {
-    List<TaskV2> findByStatus(Status status);
-    List<TaskV2> findByStatusIn(List<Status> statuses, Sort sort);
+public interface TaskV2Repository extends JpaRepository<TaskV3, Integer> {
+    List<TaskV3> findByStatus(StatusV3 statusV3);
+    List<TaskV3> findByStatusIn(List<StatusV3> statusV3s, Sort sort);
 
 
-    Optional<TaskV2> findByIdAndBoardBoardId(int taskId, String boardId); //fetch single task
-    List<TaskV2> findByBoardBoardId(String boardId); //fetch all tasks in a board
+    Optional<TaskV3> findByIdAndBoardBoardId(int taskId, String boardId); //fetch single task
+    List<TaskV3> findByBoardBoardId(String boardId); //fetch all tasks in a board
 
-    List<TaskV2> findByBoardBoardId(String boardId, Sort sort); //fetch all tasks in a board (sorted)
+    List<TaskV3> findByBoardBoardId(String boardId, Sort sort); //fetch all tasks in a board (sorted)
 
-    List<TaskV2> findByStatusInAndBoardBoardId(List<Status> statuses, String boardId, Sort sort); //fetch all tasks in a board (sorted, status filtered)
-    List<TaskV2> findByStatusInAndBoardBoardId(List<Status> statuses, String boardId); //fetch all tasks in a board (status filtered no sort)
+    List<TaskV3> findByStatusInAndBoardBoardId(List<StatusV3> statusV3s, String boardId, Sort sort); //fetch all tasks in a board (sorted, status filtered)
+    List<TaskV3> findByStatusInAndBoardBoardId(List<StatusV3> statusV3s, String boardId); //fetch all tasks in a board (status filtered no sort)
 }

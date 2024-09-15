@@ -1,7 +1,6 @@
 package com.pl03.kanban.services;
 
 import com.pl03.kanban.dtos.StatusDto;
-import com.pl03.kanban.kanban_entities.Status;
 
 import java.util.List;
 
