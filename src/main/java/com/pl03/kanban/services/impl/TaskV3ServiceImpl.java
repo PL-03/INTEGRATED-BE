@@ -1,6 +1,7 @@
 package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.dtos.AddEditTaskDto;
+import com.pl03.kanban.dtos.TaskDetailDto;
 import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
 import com.pl03.kanban.dtos.GetAllTaskDto;
@@ -103,15 +104,20 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     }
 
     @Override
-    public AddEditTaskDto getTaskById(String boardId, int taskId) {
+    public TaskDetailDto getTaskById(String boardId, int taskId) {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         TaskV3 task = taskV3Repository.findByIdAndBoardBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
 
-        // Map the entity to AddEditTaskDto and return
-        return modelMapper.map(task, AddEditTaskDto.class);
+        // Map the entity to TaskDetailDto
+        TaskDetailDto taskDetailDto = modelMapper.map(task, TaskDetailDto.class);
+
+        // Manually set the status to the status name only
+        taskDetailDto.setStatus(task.getStatusV3().getName());
+
+        return taskDetailDto;
     }
 
     @Override

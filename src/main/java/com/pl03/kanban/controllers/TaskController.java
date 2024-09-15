@@ -2,6 +2,7 @@ package com.pl03.kanban.controllers;
 
 import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
+import com.pl03.kanban.dtos.TaskDetailDto;
 import com.pl03.kanban.services.TaskV3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -41,8 +42,8 @@ public class TaskController {
     }
 
     @GetMapping("/{taskId}")
-    public ResponseEntity<AddEditTaskDto> getTaskById(@PathVariable String id, @PathVariable int taskId) {
-        AddEditTaskDto taskDto = taskV3Service.getTaskById(id, taskId);
+    public ResponseEntity<TaskDetailDto> getTaskById(@PathVariable String id, @PathVariable int taskId) {
+        TaskDetailDto taskDto = taskV3Service.getTaskById(id, taskId);
         return ResponseEntity.ok(taskDto);
     }
 

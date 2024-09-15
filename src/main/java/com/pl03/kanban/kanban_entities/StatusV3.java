@@ -10,7 +10,7 @@ import lombok.experimental.FieldNameConstants;
 import java.sql.Timestamp;
 
 @Entity
-@Table(name = "status", schema = "kanban_entities")
+@Table(name = "statusv3", schema = "kanban_entities")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

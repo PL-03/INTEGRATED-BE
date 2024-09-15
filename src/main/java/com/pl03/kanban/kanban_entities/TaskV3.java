@@ -10,7 +10,7 @@ import java.sql.Timestamp;
 
 @Data
 @Entity
-@Table(name = "taskv2", schema = "kanban_entities")
+@Table(name = "taskv3", schema = "kanban_entities")
 @AllArgsConstructor
 @NoArgsConstructor
 public class TaskV3 {
