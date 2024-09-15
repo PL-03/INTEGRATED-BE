@@ -91,7 +91,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         } else if (sortBy == null) {
             List<StatusV3> filteredStatusV3s = statusV3Repository.findByNameInAndBoardBoardId(filterStatuses, boardId);
             tasks = taskV3Repository.findByStatusV3InAndBoardBoardId(filteredStatusV3s, boardId);
-        } else if (!sortBy.equals("status.name")) {
+        } else if (!sortBy.equals("statusV3.name")) {
             throw new InvalidTaskFieldException("invalid filter parameter");
         } else if (filterStatuses == null || filterStatuses.isEmpty()) {
             tasks = taskV3Repository.findByBoardBoardId(boardId, Sort.by(Sort.Direction.ASC, sortBy));
