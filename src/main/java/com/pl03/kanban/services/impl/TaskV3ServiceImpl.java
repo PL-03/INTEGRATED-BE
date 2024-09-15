@@ -134,7 +134,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     @Override
     public AddEditTaskDto updateTask(String boardId, int taskId, AddEditTaskDto addEditTaskDto) {
         // First, check if the board exists
-        Board board = boardRepository.findById(boardId)
+        boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         // Check if the task exists in the board
@@ -147,8 +147,10 @@ public class TaskV3ServiceImpl implements TaskV3Service {
             throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
-        // Update task details using ModelMapper
-        modelMapper.map(addEditTaskDto, task);
+        // Update task fields only if the new values are not null or empty (using the setters in AddEditTaskDto)
+        task.setTitle(addEditTaskDto.getTitle() == null ? task.getTitle() : addEditTaskDto.getTitle().trim());
+        task.setDescription(addEditTaskDto.getDescription() == null ? task.getDescription() : addEditTaskDto.getDescription().trim());
+        task.setAssignees(addEditTaskDto.getAssignees() == null ? task.getAssignees() : addEditTaskDto.getAssignees().trim());
 
         // Set the status if provided
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
@@ -157,8 +159,8 @@ public class TaskV3ServiceImpl implements TaskV3Service {
             task.setStatusV3(statusV3);
         }
 
-        // No change to boardId - keep the task associated with the current board
-        task.setBoard(board);
+        // Ensure the task remains associated with the same board
+        task.setBoard(task.getBoard());
 
         // Save the updated task
         TaskV3 updatedTask = taskV3Repository.save(task);
@@ -166,7 +168,6 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         // Return the mapped DTO
         return modelMapper.map(updatedTask, AddEditTaskDto.class);
     }
-
 
     private ErrorResponse validateTaskFields(AddEditTaskDto addEditTaskDto) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details", "");
