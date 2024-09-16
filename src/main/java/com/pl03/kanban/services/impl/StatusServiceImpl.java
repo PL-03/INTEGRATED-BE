@@ -99,8 +99,14 @@ public class StatusServiceImpl implements StatusService {
             }
         }
 
-        if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
-            throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
+        // Check if the status name is different before validating for uniqueness
+        if (!statusV3.getName().equalsIgnoreCase(updatedStatusDto.getName())) {
+            errorResponse = validateStatusFields(updatedStatusDto.getName(), updatedStatusDto.getDescription(), id, boardId);
+
+            // If validation errors are found, throw an exception
+            if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
+                throw new InvalidStatusFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
+            }
         }
 
         statusV3.setName(updatedStatusDto.getName() == null || updatedStatusDto.getName().trim().isEmpty() ? statusV3.getName()
