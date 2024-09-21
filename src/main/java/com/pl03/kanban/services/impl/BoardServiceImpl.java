@@ -7,6 +7,8 @@ import com.pl03.kanban.exceptions.InvalidBoardFieldException;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
 import com.pl03.kanban.kanban_entities.Board;
 import com.pl03.kanban.kanban_entities.BoardRepository;
+import com.pl03.kanban.kanban_entities.Users;
+import com.pl03.kanban.kanban_entities.UsersRepository;
 import com.pl03.kanban.services.BoardService;
 import com.pl03.kanban.services.StatusService;
 import com.pl03.kanban.utils.ListMapper;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 public class BoardServiceImpl implements BoardService {
 
     private final BoardRepository boardRepository;
+    private final UsersRepository usersRepository;
     private final ModelMapper modelMapper;
     private final ListMapper listMapper;
     private final StatusService statusService;
@@ -29,8 +32,9 @@ public class BoardServiceImpl implements BoardService {
     private static final int MAX_BOARD_NAME_LENGTH = 120;
 
     @Autowired
-    public BoardServiceImpl(BoardRepository boardRepository, ModelMapper modelMapper, ListMapper listMapper, StatusService statusService) {
+    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, ModelMapper modelMapper, ListMapper listMapper, StatusService statusService) {
         this.boardRepository = boardRepository;
+        this.usersRepository = usersRepository;
         this.modelMapper = modelMapper;
         this.listMapper = listMapper;
         this.statusService = statusService;
@@ -48,9 +52,13 @@ public class BoardServiceImpl implements BoardService {
         String trimmedBoardName = request.getName().trim();
         request.setName(trimmedBoardName);
 
+        // Fetch the user by OID
+        Users users = usersRepository.findByOid(ownerOid)
+                .orElseThrow(() -> new ItemNotFoundException("User with oid " + ownerOid + " does not exist"));
+
         // Map the request to the Board entity
         Board board = modelMapper.map(request, Board.class);
-        board.setOid(ownerOid);
+        board.setUser(users);  // Associate the user with the board
 
         // Ensure unique boardId
         do {
@@ -65,6 +73,8 @@ public class BoardServiceImpl implements BoardService {
 
         return createBoardResponse(board, ownerName);
     }
+
+
 
 
 
@@ -85,9 +95,11 @@ public class BoardServiceImpl implements BoardService {
 
     private BoardResponse createBoardResponse(Board board, String ownerName) {
         BoardResponse response = modelMapper.map(board, BoardResponse.class);
-        response.setOwner(new BoardResponse.OwnerResponse(board.getOid(), ownerName));
+        response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));  // Get OID from user
         return response;
     }
+
+
 
     // Validation method for the board name
     private ErrorResponse validateBoardFields(BoardRequest boardRequest) {

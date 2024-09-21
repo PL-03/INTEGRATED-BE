@@ -59,9 +59,9 @@ public class JwtAuthzFilter extends OncePerRequestFilter {
         } catch (IllegalArgumentException e) {
             setErrorResponse(response, "JWT token compact of handler are invalid");
         }
-//        catch (Exception e) {
-//            setErrorResponse(response, "An error occurred while processing the JWT");
-//        }
+        catch (Exception e) {
+            setErrorResponse(response, "An error occurred while processing the JWT");
+        }
     }
 
     private void setErrorResponse(HttpServletResponse response, String message) throws IOException {

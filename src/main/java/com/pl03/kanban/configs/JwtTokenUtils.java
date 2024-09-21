@@ -9,19 +9,29 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.security.SignatureException;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
+import java.security.Key;
+import io.jsonwebtoken.io.Decoders;
 @Component
 public class JwtTokenUtils {
 
     private SecretKey secretKey;
 
+
     @PostConstruct
     public void init() {
-        // Generate a secure key for HS512
-        this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+        this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+
+        String encodedKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
+
+        System.out.println(encodedKey);
+    }
+
+    private Key key() {
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode("test"));
     }
 
     public String generateToken(User user) {

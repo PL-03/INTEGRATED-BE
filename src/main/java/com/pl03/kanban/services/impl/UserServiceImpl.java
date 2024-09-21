@@ -3,9 +3,13 @@ package com.pl03.kanban.services.impl;
 import com.pl03.kanban.configs.JwtTokenUtils;
 import com.pl03.kanban.dtos.UserDto;
 import com.pl03.kanban.exceptions.ErrorResponse;
+import com.pl03.kanban.exceptions.ItemNotFoundException;
+import com.pl03.kanban.kanban_entities.Users;
+import com.pl03.kanban.kanban_entities.UsersRepository;
 import com.pl03.kanban.services.UserService;
 import com.pl03.kanban.user_entities.User;
 import com.pl03.kanban.user_entities.UserRepository;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,15 +28,17 @@ import java.util.Objects;
 @Service
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository userRepository;
+    private final UserRepository userRepository; // Existing repository for authentication
+    private final UsersRepository usersRepository; // New repository for the Users table
     private final PasswordEncoder passwordEncoder;
-    private final JwtTokenUtils jwtTokenUtilsUtil;
+    private final JwtTokenUtils jwtTokenUtils;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenUtils jwtTokenUtilsUtil) {
-        this.userRepository = userRepository;
+    public UserServiceImpl(UsersRepository usersRepository, PasswordEncoder passwordEncoder, JwtTokenUtils jwtTokenUtils, UserRepository userRepository) {
+        this.usersRepository = usersRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtTokenUtilsUtil = jwtTokenUtilsUtil;
+        this.userRepository = userRepository;
+        this.jwtTokenUtils = jwtTokenUtils;
     }
 
     @Override
@@ -62,6 +68,7 @@ public class UserServiceImpl implements UserService {
         }
 
         try {
+            // First, authenticate using the existing UserRepository
             User user = userRepository.findByUsername(loginRequest.getUserName());
 
             if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
@@ -69,7 +76,17 @@ public class UserServiceImpl implements UserService {
             }
 
             // Generate JWT token
-            String token = jwtTokenUtilsUtil.generateToken(user);
+            String token = jwtTokenUtils.generateToken(user);
+
+            // Check if the user exists in the new Users table
+            Users newUser = usersRepository.findByOid(user.getOid())
+                    .orElseThrow(() -> new ItemNotFoundException("User with oid " + user.getOid() + " does not exist"));
+
+            if (newUser == null) {
+                // First-time login: create new user in the Users table
+                newUser = createNewUser(user, loginRequest);
+            }
+
             return ResponseEntity.ok(Map.of("access_token", token));
 
         } catch (AuthenticationException ex) {
@@ -80,4 +97,16 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    private Users createNewUser(User authenticatedUser, UserDto loginRequest) {
+        Users newUser = new Users();
+        newUser.setOid(authenticatedUser.getOid());
+        newUser.setUsername(authenticatedUser.getUsername());
+        newUser.setName(authenticatedUser.getName());
+        newUser.setEmail(authenticatedUser.getEmail());
+
+        // Save the new user
+        return usersRepository.save(newUser);
+    }
 }
+
+
