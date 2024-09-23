@@ -2,7 +2,7 @@ package com.pl03.kanban.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pl03.kanban.exceptions.ErrorResponse;
-import com.pl03.kanban.configs.JwtTokenUtils;
+import com.pl03.kanban.utils.JwtTokenUtils;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
@@ -17,11 +17,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import io.jsonwebtoken.security.SignatureException;
 
-public class JwtAuthzFilter extends OncePerRequestFilter {
+public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtTokenUtils jwtTokenUtils;
 
-    public JwtAuthzFilter(JwtTokenUtils jwtTokenUtils) {
+    public JwtAuthFilter(JwtTokenUtils jwtTokenUtils) {
         this.jwtTokenUtils = jwtTokenUtils;
     }
 
@@ -59,9 +59,10 @@ public class JwtAuthzFilter extends OncePerRequestFilter {
         } catch (IllegalArgumentException e) {
             setErrorResponse(response, "JWT token compact of handler are invalid");
         }
-        catch (Exception e) {
-            setErrorResponse(response, "An error occurred while processing the JWT");
-        }
+//        catch (Exception e) {
+//            setErrorResponse(response, "An error occurred while processing the JWT");
+//        }
+
     }
 
     private void setErrorResponse(HttpServletResponse response, String message) throws IOException {

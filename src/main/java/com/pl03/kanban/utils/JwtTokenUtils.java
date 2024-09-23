@@ -1,9 +1,10 @@
-package com.pl03.kanban.configs;
+package com.pl03.kanban.utils;
 
 import com.pl03.kanban.user_entities.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 
@@ -18,21 +19,25 @@ import io.jsonwebtoken.io.Decoders;
 @Component
 public class JwtTokenUtils {
 
-    private SecretKey secretKey;
+    @Value("${jwt.secret}")
+    private String SECRET_KEY;
+    SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+
+//    private SecretKey secretKey;
 
 
-    @PostConstruct
-    public void init() {
-        this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+//    @PostConstruct
+//    public void init() {
+//        this.secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+//
+//        String encodedKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
+//
+//        System.out.println(encodedKey);
+//    }
 
-        String encodedKey = Base64.getEncoder().encodeToString(secretKey.getEncoded());
-
-        System.out.println(encodedKey);
-    }
-
-    private Key key() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode("test"));
-    }
+//    private Key key() {
+//        return Keys.hmacShaKeyFor(Decoders.BASE64.decode("test"));
+//    }
 
     public String generateToken(User user) {
         Map<String, Object> information = new HashMap<>();
@@ -49,12 +54,12 @@ public class JwtTokenUtils {
                 .setIssuer("https://intproj23.sit.kmutt.ac.th/pl3/")
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiration * 1000))
-                .signWith(secretKey)
+                .signWith(signatureAlgorithm, SECRET_KEY)
                 .compact();
     }
     public Claims getClaimsFromToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+                .setSigningKey(SECRET_KEY)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
@@ -63,7 +68,7 @@ public class JwtTokenUtils {
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
-                    .setSigningKey(secretKey)
+                    .setSigningKey(SECRET_KEY)
                     .build()
                     .parseClaimsJws(token);
             return true;

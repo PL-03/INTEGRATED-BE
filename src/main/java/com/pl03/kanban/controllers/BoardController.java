@@ -1,11 +1,10 @@
 package com.pl03.kanban.controllers;
 
-import com.pl03.kanban.configs.JwtTokenUtils;
+import com.pl03.kanban.utils.JwtTokenUtils;
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
 import com.pl03.kanban.services.BoardService;
 import io.jsonwebtoken.Claims;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +41,7 @@ public class BoardController {
         String ownerName = claims.get("name", String.class);
 
         BoardResponse response = boardService.createBoard(request, ownerOid, ownerName);
-        return ResponseEntity.ok(response);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")

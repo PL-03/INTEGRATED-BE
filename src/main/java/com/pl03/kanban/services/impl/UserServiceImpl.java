@@ -1,6 +1,6 @@
 package com.pl03.kanban.services.impl;
 
-import com.pl03.kanban.configs.JwtTokenUtils;
+import com.pl03.kanban.utils.JwtTokenUtils;
 import com.pl03.kanban.dtos.UserDto;
 import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
@@ -9,7 +9,6 @@ import com.pl03.kanban.kanban_entities.UsersRepository;
 import com.pl03.kanban.services.UserService;
 import com.pl03.kanban.user_entities.User;
 import com.pl03.kanban.user_entities.UserRepository;
-import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,8 +27,8 @@ import java.util.Objects;
 @Service
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository userRepository; // Existing repository for authentication
-    private final UsersRepository usersRepository; // New repository for the Users table
+    private final UserRepository userRepository; // shared user db
+    private final UsersRepository usersRepository; // our own user db
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtils jwtTokenUtils;
 
@@ -79,8 +78,7 @@ public class UserServiceImpl implements UserService {
             String token = jwtTokenUtils.generateToken(user);
 
             // Check if the user exists in the new Users table
-            Users newUser = usersRepository.findByOid(user.getOid())
-                    .orElseThrow(() -> new ItemNotFoundException("User with oid " + user.getOid() + " does not exist"));
+            Users newUser = usersRepository.findByOid(user.getOid()).orElse(null);
 
             if (newUser == null) {
                 // First-time login: create new user in the Users table
@@ -108,5 +106,6 @@ public class UserServiceImpl implements UserService {
         return usersRepository.save(newUser);
     }
 }
+
 
 
