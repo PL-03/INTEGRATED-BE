@@ -42,6 +42,10 @@ public class Board {
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StatusV3> statusV3s;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false)
+    private Visibility visibility = Visibility.PRIVATE; // Default visibility set to PRIVATE
+
     @Column(name = "createdOn", nullable = false, updatable = false, insertable = false)
     private Timestamp createdOn;
 
@@ -56,4 +60,10 @@ public class Board {
     public void generateUniqueId() {
         this.boardId = NanoId.generate(10);
     }
+
+    public enum Visibility {
+        PRIVATE, PUBLIC
+    }
+
 }
+

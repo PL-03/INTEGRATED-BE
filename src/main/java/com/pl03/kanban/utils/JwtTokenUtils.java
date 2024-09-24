@@ -23,6 +23,7 @@ public class JwtTokenUtils {
     private String SECRET_KEY;
     SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
 
+    //didnt use 512
 //    private SecretKey secretKey;
 
 

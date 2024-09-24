@@ -10,7 +10,10 @@ public class BoardResponse {
     private String boardId;
     private String name;
     private OwnerResponse owner;
-
+    private Visibility visibility;
+    public enum Visibility {
+        PRIVATE, PUBLIC
+    }
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
@@ -18,4 +21,6 @@ public class BoardResponse {
         private String oid;
         private String name;
     }
+
+
 }

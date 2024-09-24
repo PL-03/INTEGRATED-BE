@@ -71,4 +71,21 @@ public class BoardController {
         List<BoardResponse> responseList = boardService.getAllBoards(ownerName);
         return ResponseEntity.ok(responseList);
     }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<BoardResponse> updateBoardVisibility(
+            @PathVariable String id,
+            @RequestBody String visibility,
+            @RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring(7);
+        if (!jwtTokenUtils.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Claims claims = jwtTokenUtils.getClaimsFromToken(token);
+        String ownerOid = claims.get("oid", String.class);
+
+        BoardResponse response = boardService.updateBoardVisibility(id, visibility, ownerOid);
+        return ResponseEntity.ok(response);
+    }
 }

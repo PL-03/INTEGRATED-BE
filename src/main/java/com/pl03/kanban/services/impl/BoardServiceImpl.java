@@ -65,32 +65,84 @@ public class BoardServiceImpl implements BoardService {
             board.generateUniqueId();
         } while (boardRepository.existsByBoardId(board.getBoardId()));
 
+        // Set default visibility to PRIVATE
+        board.setVisibility(Board.Visibility.PRIVATE);
+
         // Save the board
         board = boardRepository.save(board);
 
         // Add default status to the board
         statusService.addDefaultStatus(board.getBoardId());
 
+        // Return the BoardResponse
         return createBoardResponse(board, ownerName);
     }
 
 
-
-
-
     @Override
-    public BoardResponse getBoardById(String id, String ownerName) {
+    public BoardResponse getBoardById(String id, String requesterOid) {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + id));
-        return createBoardResponse(board, ownerName);
+
+        // If the board is public, allow anyone to access it
+        if (board.getVisibility() == Board.Visibility.PUBLIC) {
+            return createBoardResponse(board, null);
+        }
+
+        // If the board is private, verify if the requester is the owner
+        String boardOwnerOid = board.getUser().getOid();
+        if (!boardOwnerOid.equals(requesterOid)) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Only the board owner can access a private board",
+                    ""
+            );
+            throw new InvalidBoardFieldException("Unauthorized access", errorResponse.getErrors());
+        }
+
+        return createBoardResponse(board, board.getUser().getName());
     }
 
     @Override
-    public List<BoardResponse> getAllBoards(String ownerName) {
+    public List<BoardResponse> getAllBoards(String requesterOid) {
         List<Board> boards = boardRepository.findAll();
         return boards.stream()
-                .map(board -> createBoardResponse(board, ownerName))
+                .filter(board -> board.getUser().getOid().equals(requesterOid) || board.getVisibility() == Board.Visibility.PUBLIC)
+                .map(board -> createBoardResponse(board, board.getUser().getName()))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public BoardResponse updateBoardVisibility(String boardId, String visibility, String ownerOid) {
+        // Fetch the board by id
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + boardId));
+
+        // Verify if the requester is the board owner
+        String boardOwnerOid = board.getUser().getOid();
+        if (!boardOwnerOid.equals(ownerOid)) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Only the board owner can change the visibility",
+                    ""
+            );
+            throw new InvalidBoardFieldException("Unauthorized access", errorResponse.getErrors());
+        }
+
+        // Update the visibility
+        Board.Visibility newVisibility;
+        try {
+            newVisibility = Board.Visibility.valueOf(visibility.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Invalid visibility value", "");
+            errorResponse.addValidationError("visibility", "Visibility must be 'PRIVATE' or 'PUBLIC'");
+            throw new InvalidBoardFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
+        }
+        board.setVisibility(newVisibility);
+        board = boardRepository.save(board);
+
+        // Return the updated BoardResponse
+        return createBoardResponse(board, board.getUser().getName());
     }
 
     private BoardResponse createBoardResponse(Board board, String ownerName) {
