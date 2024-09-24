@@ -15,6 +15,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Map;
+
 import io.jsonwebtoken.security.SignatureException;
 
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -44,8 +46,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 return;
             }
 
-            var claims = jwtTokenUtils.getClaimsFromToken(token);
-            var authentication = new UsernamePasswordAuthenticationToken(claims, null, null);
+            Map<String, Object> claims = jwtTokenUtils.getClaimsFromToken(token);
+            JwtUserDetails userDetails = new JwtUserDetails(claims);
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities()
+            );
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -60,9 +65,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             setErrorResponse(response, "JWT token compact of handler are invalid");
         }
 //        catch (Exception e) {
-//            setErrorResponse(response, "An error occurred while processing the JWT");
-//        }
-
+////            setErrorResponse(response, "An error occurred while processing the JWT");
+////        }
     }
 
     private void setErrorResponse(HttpServletResponse response, String message) throws IOException {

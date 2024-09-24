@@ -21,6 +21,4 @@ public class BoardResponse {
         private String oid;
         private String name;
     }
-
-
 }

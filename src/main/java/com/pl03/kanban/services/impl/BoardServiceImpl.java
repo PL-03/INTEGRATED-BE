@@ -5,6 +5,7 @@ import com.pl03.kanban.dtos.BoardResponse;
 import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.exceptions.InvalidBoardFieldException;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
+import com.pl03.kanban.exceptions.UnauthorizedAccessException;
 import com.pl03.kanban.kanban_entities.Board;
 import com.pl03.kanban.kanban_entities.BoardRepository;
 import com.pl03.kanban.kanban_entities.Users;
@@ -84,9 +85,9 @@ public class BoardServiceImpl implements BoardService {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + id));
 
-        // If the board is public, allow anyone to access it
+        // If the board is public, return the BoardResponse
         if (board.getVisibility() == Board.Visibility.PUBLIC) {
-            return createBoardResponse(board, null);
+            return createBoardResponse(board, board.getUser().getName());
         }
 
         // If the board is private, verify if the requester is the owner
@@ -97,11 +98,12 @@ public class BoardServiceImpl implements BoardService {
                     "Only the board owner can access a private board",
                     ""
             );
-            throw new InvalidBoardFieldException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
         }
 
         return createBoardResponse(board, board.getUser().getName());
     }
+
 
     @Override
     public List<BoardResponse> getAllBoards(String requesterOid) {
@@ -129,21 +131,21 @@ public class BoardServiceImpl implements BoardService {
             throw new InvalidBoardFieldException("Unauthorized access", errorResponse.getErrors());
         }
 
-        // Update the visibility
-        Board.Visibility newVisibility;
-        try {
-            newVisibility = Board.Visibility.valueOf(visibility.toUpperCase());
-        } catch (IllegalArgumentException e) {
+        // Validate visibility value
+        if (!"private".equalsIgnoreCase(visibility) && !"public".equalsIgnoreCase(visibility)) {
             ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Invalid visibility value", "");
             errorResponse.addValidationError("visibility", "Visibility must be 'PRIVATE' or 'PUBLIC'");
             throw new InvalidBoardFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
-        board.setVisibility(newVisibility);
+
+        // Update the visibility
+        board.setVisibility(Board.Visibility.valueOf(visibility.toUpperCase()));
         board = boardRepository.save(board);
 
         // Return the updated BoardResponse
         return createBoardResponse(board, board.getUser().getName());
     }
+
 
     private BoardResponse createBoardResponse(Board board, String ownerName) {
         BoardResponse response = modelMapper.map(board, BoardResponse.class);

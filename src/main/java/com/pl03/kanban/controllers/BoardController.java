@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+
 @CrossOrigin(origins = {"http://localhost:5173",
         "http://intproj23.sit.kmutt.ac.th",
         "http://intproj23.sit.kmutt.ac.th/pl3",
@@ -75,7 +77,7 @@ public class BoardController {
     @PatchMapping("/{id}")
     public ResponseEntity<BoardResponse> updateBoardVisibility(
             @PathVariable String id,
-            @RequestBody String visibility,
+            @RequestBody Map<String, String> updateRequest,
             @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
         if (!jwtTokenUtils.validateToken(token)) {
@@ -84,8 +86,10 @@ public class BoardController {
 
         Claims claims = jwtTokenUtils.getClaimsFromToken(token);
         String ownerOid = claims.get("oid", String.class);
+        String visibility = updateRequest.get("visibility");
 
         BoardResponse response = boardService.updateBoardVisibility(id, visibility, ownerOid);
         return ResponseEntity.ok(response);
     }
+
 }
