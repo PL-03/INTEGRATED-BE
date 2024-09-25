@@ -3,6 +3,7 @@ package com.pl03.kanban.controllers;
 import com.pl03.kanban.dtos.UserDto;
 import com.pl03.kanban.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +25,15 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UserDto loginRequest) {
         return userService.login(loginRequest);
+    }
+
+    @PostMapping("/token")
+    public ResponseEntity<?> refreshToken(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No refresh token provided");
+        }
+        String refreshToken = authHeader.substring(7);
+        return userService.refreshToken(refreshToken);
     }
 }
 

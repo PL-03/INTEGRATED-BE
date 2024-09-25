@@ -38,7 +38,7 @@ public class BoardController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Claims claims = jwtTokenUtils.getClaimsFromToken(token);
+        Claims claims = (Claims) jwtTokenUtils.getClaimsFromToken(token);
         String ownerOid = claims.get("oid", String.class);
         String ownerName = claims.get("name", String.class);
 
@@ -53,7 +53,7 @@ public class BoardController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Claims claims = jwtTokenUtils.getClaimsFromToken(token);
+        Claims claims = (Claims) jwtTokenUtils.getClaimsFromToken(token);
         String requesterOid = claims.get("oid", String.class);
 
         BoardResponse response = boardService.getBoardById(id, requesterOid);
@@ -67,7 +67,7 @@ public class BoardController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Claims claims = jwtTokenUtils.getClaimsFromToken(token);
+        Claims claims = (Claims) jwtTokenUtils.getClaimsFromToken(token);
         String requesterOid = claims.get("oid", String.class);
 
         List<BoardResponse> responseList = boardService.getAllBoards(requesterOid);
@@ -84,7 +84,7 @@ public class BoardController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Claims claims = jwtTokenUtils.getClaimsFromToken(token);
+        Claims claims = (Claims) jwtTokenUtils.getClaimsFromToken(token);
         String ownerOid = claims.get("oid", String.class);
 
         String visibility = updateRequest.get("visibility");

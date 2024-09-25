@@ -19,10 +19,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.naming.AuthenticationException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -67,25 +64,26 @@ public class UserServiceImpl implements UserService {
         }
 
         try {
-            // First, authenticate using the existing UserRepository
             User user = userRepository.findByUsername(loginRequest.getUserName());
 
             if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
                 throw new AuthenticationException("The username or password is incorrect.");
             }
 
-            // Generate JWT token
-            String token = jwtTokenUtils.generateToken(user);
+            String accessToken = jwtTokenUtils.generateAccessToken(user);
+            String refreshToken = jwtTokenUtils.generateRefreshToken(user);
 
-            // Check if the user exists in the new Users table
             Users newUser = usersRepository.findByOid(user.getOid()).orElse(null);
 
             if (newUser == null) {
-                // First-time login: create new user in the Users table
                 newUser = createNewUser(user, loginRequest);
             }
 
-            return ResponseEntity.ok(Map.of("access_token", token));
+            Map<String, String> tokens = new HashMap<>();
+            tokens.put("access_token", accessToken);
+            tokens.put("refresh_token", refreshToken);
+
+            return ResponseEntity.ok(tokens);
 
         } catch (AuthenticationException ex) {
             // Handle the authentication error
@@ -94,6 +92,25 @@ public class UserServiceImpl implements UserService {
             return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
         }
     }
+
+    @Override
+    public ResponseEntity<?> refreshToken(String refreshToken) {
+        if (!jwtTokenUtils.validateToken(refreshToken)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+        }
+
+        Map<String, Object> claims = jwtTokenUtils.getClaimsFromToken(refreshToken);
+        String oid = (String) claims.get("oid");
+        User user = userRepository.findByOid(oid);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+        }
+
+        String newAccessToken = jwtTokenUtils.generateAccessToken(user);
+        return ResponseEntity.ok(Map.of("access_token", newAccessToken));
+    }
+
 
     private Users createNewUser(User authenticatedUser, UserDto loginRequest) {
         Users newUser = new Users();
