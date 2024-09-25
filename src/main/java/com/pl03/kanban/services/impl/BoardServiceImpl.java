@@ -85,23 +85,18 @@ public class BoardServiceImpl implements BoardService {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + id));
 
-        // If the board is public, return the BoardResponse
-        if (board.getVisibility() == Board.Visibility.PUBLIC) {
+        // If the board is public or the requester is the owner, return the board
+        if (board.getVisibility() == Board.Visibility.PUBLIC || board.getUser().getOid().equals(requesterOid)) {
             return createBoardResponse(board, board.getUser().getName());
         }
 
-        // If the board is private, verify if the requester is the owner
-        String boardOwnerOid = board.getUser().getOid();
-        if (!boardOwnerOid.equals(requesterOid)) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    ""
-            );
-            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
-        }
-
-        return createBoardResponse(board, board.getUser().getName());
+        // If the board is private and the requester is not the owner, throw an exception
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "Only the board owner can access a private board",
+                "Authorization error"
+        );
+        throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
     }
 
 
@@ -121,25 +116,29 @@ public class BoardServiceImpl implements BoardService {
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + boardId));
 
         // Verify if the requester is the board owner
-        String boardOwnerOid = board.getUser().getOid();
-        if (!boardOwnerOid.equals(ownerOid)) {
+        if (!board.getUser().getOid().equals(ownerOid)) {
             ErrorResponse errorResponse = new ErrorResponse(
                     HttpStatus.FORBIDDEN.value(),
                     "Only the board owner can change the visibility",
-                    ""
+                    "Authorization error"
             );
-            throw new InvalidBoardFieldException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
         }
 
-        // Validate visibility value
-        if (!"private".equalsIgnoreCase(visibility) && !"public".equalsIgnoreCase(visibility)) {
-            ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Invalid visibility value", "");
+        // Update the visibility
+        try {
+            board.setVisibility(Board.Visibility.valueOf(visibility.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.BAD_REQUEST.value(),
+                    "Invalid visibility value",
+                    "Validation error"
+            );
             errorResponse.addValidationError("visibility", "Visibility must be 'PRIVATE' or 'PUBLIC'");
             throw new InvalidBoardFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
-        // Update the visibility
-        board.setVisibility(Board.Visibility.valueOf(visibility.toUpperCase()));
+        // Save the updated board
         board = boardRepository.save(board);
 
         // Return the updated BoardResponse

@@ -54,9 +54,9 @@ public class BoardController {
         }
 
         Claims claims = jwtTokenUtils.getClaimsFromToken(token);
-        String ownerName = claims.get("name", String.class);
+        String requesterOid = claims.get("oid", String.class);
 
-        BoardResponse response = boardService.getBoardById(id, ownerName);
+        BoardResponse response = boardService.getBoardById(id, requesterOid);
         return ResponseEntity.ok(response);
     }
 
@@ -68,9 +68,9 @@ public class BoardController {
         }
 
         Claims claims = jwtTokenUtils.getClaimsFromToken(token);
-        String ownerName = claims.get("name", String.class);
+        String requesterOid = claims.get("oid", String.class);
 
-        List<BoardResponse> responseList = boardService.getAllBoards(ownerName);
+        List<BoardResponse> responseList = boardService.getAllBoards(requesterOid);
         return ResponseEntity.ok(responseList);
     }
 
@@ -86,7 +86,11 @@ public class BoardController {
 
         Claims claims = jwtTokenUtils.getClaimsFromToken(token);
         String ownerOid = claims.get("oid", String.class);
+
         String visibility = updateRequest.get("visibility");
+        if (visibility == null) {
+            return ResponseEntity.badRequest().body(null);
+        }
 
         BoardResponse response = boardService.updateBoardVisibility(id, visibility, ownerOid);
         return ResponseEntity.ok(response);
