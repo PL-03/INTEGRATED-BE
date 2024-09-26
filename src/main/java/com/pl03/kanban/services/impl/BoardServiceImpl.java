@@ -64,7 +64,7 @@ public class BoardServiceImpl implements BoardService {
         // Ensure unique boardId
         do {
             board.generateUniqueId();
-        } while (boardRepository.existsByBoardId(board.getBoardId()));
+        } while (boardRepository.existsById(board.getId()));
 
         // Set default visibility to PRIVATE
         board.setVisibility(Board.Visibility.PRIVATE);
@@ -73,7 +73,7 @@ public class BoardServiceImpl implements BoardService {
         board = boardRepository.save(board);
 
         // Add default status to the board
-        statusService.addDefaultStatus(board.getBoardId());
+        statusService.addDefaultStatus(board.getId());
 
         // Return the BoardResponse
         return createBoardResponse(board, ownerName);

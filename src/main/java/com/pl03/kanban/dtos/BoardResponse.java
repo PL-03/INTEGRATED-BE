@@ -7,13 +7,15 @@ import lombok.NoArgsConstructor;
 
 @Data
 public class BoardResponse {
-    private String boardId;
+    private String id; // Changed from 'boardId' to 'id'
     private String name;
     private OwnerResponse owner;
     private Visibility visibility;
+
     public enum Visibility {
         PRIVATE, PUBLIC
     }
+
     @Data
     @AllArgsConstructor
     @NoArgsConstructor

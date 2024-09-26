@@ -24,7 +24,7 @@ public class Board {
 
     @Id
     @Column(name = "boardId", nullable = false, length = 10)
-    private String boardId;
+    private String id; // Renamed attribute to 'id' but kept the column as 'boardId'
 
     @Size(max = 120)
     @NotNull
@@ -34,7 +34,7 @@ public class Board {
     @ManyToOne
     @JoinColumn(name = "oid", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    private Users user; // Link to Users entity through oid (foreign key)
+    private Users user;
 
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TaskV3> tasks;
@@ -44,7 +44,7 @@ public class Board {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "visibility", nullable = false)
-    private Visibility visibility = Visibility.PRIVATE; // Default visibility set to PRIVATE
+    private Visibility visibility = Visibility.PRIVATE;
 
     @Column(name = "createdOn", nullable = false, updatable = false, insertable = false)
     private Timestamp createdOn;
@@ -58,12 +58,11 @@ public class Board {
     }
 
     public void generateUniqueId() {
-        this.boardId = NanoId.generate(10);
+        this.id = NanoId.generate(10);
     }
 
     public enum Visibility {
         PRIVATE, PUBLIC
     }
-
 }
 

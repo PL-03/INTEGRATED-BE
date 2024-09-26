@@ -48,7 +48,7 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        List<StatusV3> statusV3s = statusV3Repository.findByBoardBoardId(boardId);
+        List<StatusV3> statusV3s = statusV3Repository.findByBoardId(boardId);
         return listMapper.mapList(statusV3s, StatusDto.class, modelMapper);
     }
 
@@ -58,7 +58,7 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
         return modelMapper.map(statusV3, StatusDto.class);
     }
@@ -86,7 +86,7 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
         ErrorResponse errorResponse = validateStatusFields(updatedStatusDto.getName(), updatedStatusDto.getDescription(), id, boardId);
@@ -122,7 +122,7 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
         if (isStatusNameDefault(statusV3.getName())) {
@@ -143,9 +143,9 @@ public class StatusServiceImpl implements StatusService {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        StatusV3 currentStatusV3 = statusV3Repository.findByIdAndBoardBoardId(id, boardId)
+        StatusV3 currentStatusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
-        StatusV3 newStatusV3 = statusV3Repository.findByIdAndBoardBoardId(newStatusId, boardId)
+        StatusV3 newStatusV3 = statusV3Repository.findByIdAndBoardId(newStatusId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + newStatusId + " does not exist in board id: " + boardId));
 
         if (isStatusNameDefault(currentStatusV3.getName())) {
@@ -171,7 +171,7 @@ public class StatusServiceImpl implements StatusService {
             errorResponse.addValidationError(StatusV3.Fields.name, "must not be null");
         } else if (name.trim().length() > MAX_STATUS_NAME_LENGTH) {
             errorResponse.addValidationError(StatusV3.Fields.name, "size must be between 0 and " + MAX_STATUS_NAME_LENGTH);
-        } else if (statusV3Repository.existsByNameIgnoreCaseAndBoardBoardId(name, boardId)) {
+        } else if (statusV3Repository.existsByNameIgnoreCaseAndBoardId(name, boardId)) {
             errorResponse.addValidationError(StatusV3.Fields.name, "Status name must be unique within the board");
         }
 

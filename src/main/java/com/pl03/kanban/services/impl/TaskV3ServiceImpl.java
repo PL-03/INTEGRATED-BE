@@ -87,17 +87,17 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         List<TaskV3> tasks;
 
         if (sortBy == null && (filterStatuses == null || filterStatuses.isEmpty())) {
-            tasks = taskV3Repository.findByBoardBoardId(boardId);
+            tasks = taskV3Repository.findByBoardId(boardId);
         } else if (sortBy == null) {
-            List<StatusV3> filteredStatusV3s = statusV3Repository.findByNameInAndBoardBoardId(filterStatuses, boardId);
-            tasks = taskV3Repository.findByStatusV3InAndBoardBoardId(filteredStatusV3s, boardId);
+            List<StatusV3> filteredStatusV3s = statusV3Repository.findByNameInAndBoardId(filterStatuses, boardId);
+            tasks = taskV3Repository.findByStatusV3InAndBoardId(filteredStatusV3s, boardId);
         } else if (!sortBy.equals("statusV3.name")) {
             throw new InvalidTaskFieldException("invalid filter parameter");
         } else if (filterStatuses == null || filterStatuses.isEmpty()) {
-            tasks = taskV3Repository.findByBoardBoardId(boardId, Sort.by(Sort.Direction.ASC, sortBy));
+            tasks = taskV3Repository.findByBoardId(boardId, Sort.by(Sort.Direction.ASC, sortBy));
         } else {
-            List<StatusV3> filteredStatusV3s = statusV3Repository.findByNameInAndBoardBoardId(filterStatuses, boardId);
-            tasks = taskV3Repository.findByStatusV3InAndBoardBoardId(filteredStatusV3s, boardId, Sort.by(Sort.Direction.ASC, sortBy));
+            List<StatusV3> filteredStatusV3s = statusV3Repository.findByNameInAndBoardId(filterStatuses, boardId);
+            tasks = taskV3Repository.findByStatusV3InAndBoardId(filteredStatusV3s, boardId, Sort.by(Sort.Direction.ASC, sortBy));
         }
 
         return listMapper.mapList(tasks, GetAllTaskDto.class, modelMapper);
@@ -108,7 +108,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        TaskV3 task = taskV3Repository.findByIdAndBoardBoardId(taskId, boardId)
+        TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
 
         // Map the entity to TaskDetailDto
@@ -125,7 +125,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        TaskV3 task = taskV3Repository.findByIdAndBoardBoardId(taskId, boardId)
+        TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
         taskV3Repository.delete(task);
         return modelMapper.map(task, AddEditTaskDto.class);
@@ -138,7 +138,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         // Check if the task exists in the board
-        TaskV3 task = taskV3Repository.findByIdAndBoardBoardId(taskId, boardId)
+        TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
 
         // Validate task fields

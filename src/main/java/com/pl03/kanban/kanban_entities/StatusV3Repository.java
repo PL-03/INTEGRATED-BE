@@ -8,10 +8,9 @@ import java.util.Optional;
 
 @Repository
 public interface StatusV3Repository extends JpaRepository<StatusV3, Integer> {
-    List<StatusV3> findByNameInAndBoardBoardId(List<String> names, String boardId);
-//    List<StatusV3> findByNameIgnoreCaseAndIdNot(String name, int id);
-    List<StatusV3> findByBoardBoardId(String boardId);
-    Optional<StatusV3> findByIdAndBoardBoardId(int id, String boardId);
+    List<StatusV3> findByNameInAndBoardId(List<String> names, String id);
+    List<StatusV3> findByBoardId(String id);
+    Optional<StatusV3> findByIdAndBoardId(int id, String boardId);
 
-    boolean existsByNameIgnoreCaseAndBoardBoardId(String name, String board_boardId);
+    boolean existsByNameIgnoreCaseAndBoardId(String name, String boardId);
 }
