@@ -3,6 +3,7 @@ package com.pl03.kanban.services.impl;
 import com.pl03.kanban.dtos.StatusDto;
 import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
+import com.pl03.kanban.exceptions.UnauthorizedAccessException;
 import com.pl03.kanban.kanban_entities.*;
 import com.pl03.kanban.exceptions.InvalidStatusFieldException;
 import com.pl03.kanban.services.StatusService;
@@ -43,10 +44,20 @@ public class StatusServiceImpl implements StatusService {
     }
 
     @Override
-    public List<StatusDto> getAllStatuses(String boardId) {
+    public List<StatusDto> getAllStatuses(String boardId, String userId) {
         //find board first
-        boardRepository.findById(boardId)
+        Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        //check ownership
+        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Only the board owner can access a private board",
+                    "Authorization error"
+            );
+            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+        }
 
         List<StatusV3> statusV3s = statusV3Repository.findByBoardId(boardId);
         return listMapper.mapList(statusV3s, StatusDto.class, modelMapper);
@@ -54,9 +65,20 @@ public class StatusServiceImpl implements StatusService {
 
 
     @Override
-    public StatusDto getStatusById(String boardId, int id) {
-        boardRepository.findById(boardId)
+    public StatusDto getStatusById(String boardId, int id, String userId) {
+        //find board first
+        Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        //check ownership
+        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Only the board owner can access a private board",
+                    "Authorization error"
+            );
+            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+        }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
@@ -65,9 +87,20 @@ public class StatusServiceImpl implements StatusService {
 
 
     @Override
-    public StatusDto createStatus(String boardId, StatusDto statusDto) {
+    public StatusDto createStatus(String boardId, StatusDto statusDto, String userId) {
+        //find board first
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        //check ownership
+        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Only the board owner can access a private board",
+                    "Authorization error"
+            );
+            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+        }
 
         ErrorResponse errorResponse = validateStatusFields(statusDto.getName(), statusDto.getDescription(), 0, boardId);
 
@@ -82,9 +115,20 @@ public class StatusServiceImpl implements StatusService {
     }
 
     @Override
-    public StatusDto updateStatus(String boardId, int id, StatusDto updatedStatusDto) {
-        boardRepository.findById(boardId)
+    public StatusDto updateStatus(String boardId, int id, StatusDto updatedStatusDto, String userId) {
+        //find board first
+        Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        //check ownership
+        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Only the board owner can access a private board",
+                    "Authorization error"
+            );
+            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+        }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
@@ -118,9 +162,20 @@ public class StatusServiceImpl implements StatusService {
 
 
     @Override
-    public StatusDto deleteStatus(String boardId, int id) {
-        boardRepository.findById(boardId)
+    public StatusDto deleteStatus(String boardId, int id, String userId) {
+        //find board first
+        Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        //check ownership
+        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Only the board owner can access a private board",
+                    "Authorization error"
+            );
+            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+        }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
@@ -139,9 +194,20 @@ public class StatusServiceImpl implements StatusService {
     }
 
     @Override
-    public void deleteStatusAndTransferTasks(String boardId, int id, int newStatusId) {
-        boardRepository.findById(boardId)
+    public void deleteStatusAndTransferTasks(String boardId, int id, int newStatusId, String userId) {
+        //find board first
+        Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        //check ownership
+        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
+            ErrorResponse errorResponse = new ErrorResponse(
+                    HttpStatus.FORBIDDEN.value(),
+                    "Only the board owner can access a private board",
+                    "Authorization error"
+            );
+            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+        }
 
         StatusV3 currentStatusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));

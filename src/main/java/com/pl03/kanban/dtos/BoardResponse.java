@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 @Data
 public class BoardResponse {
-    private String id; // Changed from 'boardId' to 'id'
+    private String id;
     private String name;
     private OwnerResponse owner;
     private Visibility visibility;

@@ -111,7 +111,4 @@ public class JwtTokenUtils {
     public Map<String, Object> getClaimsFromToken(String token) {
         return Jwts.parser().setSigningKey(SECRET_KEY).parseClaimsJws(token).getBody();
     }
-
-
-
 }
