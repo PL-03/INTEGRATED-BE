@@ -12,10 +12,14 @@ import java.util.List;
 import java.util.Map;
 
 @CrossOrigin(origins = {"http://localhost:5173",
-                        "http://intproj23.sit.kmutt.ac.th",
-                        "http://intproj23.sit.kmutt.ac.th/pl3",
-                        "http://intproj23.sit.kmutt.ac.th/pl3/status",
-                        "http://ip23pl3.sit.kmutt.ac.th"})
+        "http://intproj23.sit.kmutt.ac.th",
+        "http://intproj23.sit.kmutt.ac.th/pl3",
+        "http://intproj23.sit.kmutt.ac.th/pl3/status",
+        "http://ip23pl3.sit.kmutt.ac.th",
+        "https://intproj23.sit.kmutt.ac.th",
+        "https://intproj23.sit.kmutt.ac.th/pl3",
+        "https://intproj23.sit.kmutt.ac.th/pl3/status",
+        "https://ip23pl3.sit.kmutt.ac.th"})
 @RestController
 @RequestMapping("/v3/boards/{boardId}/statuses")
 public class StatusController {
