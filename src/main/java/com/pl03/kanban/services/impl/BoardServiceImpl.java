@@ -86,17 +86,17 @@ public class BoardServiceImpl implements BoardService {
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + id));
 
         // If the board is public or the requester is the owner, return the board
-        if (board.getVisibility() == Board.Visibility.PUBLIC || board.getUser().getOid().equals(requesterOid)) {
+        if (board.getVisibility() == Board.Visibility.PUBLIC ||
+                (requesterOid != null && board.getUser().getOid().equals(requesterOid))) {
             return createBoardResponse(board, board.getUser().getName());
         }
 
-        // If the board is private and the requester is not the owner, throw an exception
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
-                "Only the board owner can access a private board",
+                "Access to this private board is restricted",
                 "Authorization error"
         );
-        throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+        throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
     }
 
 
@@ -104,7 +104,8 @@ public class BoardServiceImpl implements BoardService {
     public List<BoardResponse> getAllBoards(String requesterOid) {
         List<Board> boards = boardRepository.findAll();
         return boards.stream()
-                .filter(board -> board.getUser().getOid().equals(requesterOid) || board.getVisibility() == Board.Visibility.PUBLIC)
+                .filter(board -> board.getVisibility() == Board.Visibility.PUBLIC ||
+                        (requesterOid != null && board.getUser().getOid().equals(requesterOid)))
                 .map(board -> createBoardResponse(board, board.getUser().getName()))
                 .collect(Collectors.toList());
     }
@@ -122,7 +123,7 @@ public class BoardServiceImpl implements BoardService {
                     "Only the board owner can change the visibility",
                     "Authorization error"
             );
-            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
         }
 
         // Update the visibility
@@ -145,6 +146,12 @@ public class BoardServiceImpl implements BoardService {
         return createBoardResponse(board, board.getUser().getName());
     }
 
+//    @Override
+//    public boolean isOwner(String boardId, String userOid) {
+//        Board board = boardRepository.findById(boardId)
+//                .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + boardId));
+//        return board.getUser().getOid().equals(userOid);
+//    }
 
     private BoardResponse createBoardResponse(Board board, String ownerName) {
         BoardResponse response = modelMapper.map(board, BoardResponse.class);

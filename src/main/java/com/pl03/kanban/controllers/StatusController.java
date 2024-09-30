@@ -47,26 +47,29 @@ public class StatusController {
     }
 
     @GetMapping
-    public ResponseEntity<List<StatusDto>> getAllStatuses(@PathVariable String boardId, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ResponseEntity<List<StatusDto>> getAllStatuses(@PathVariable String boardId,
+                                                          @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String userId = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtTokenUtils.validateToken(token)) {
+                userId = getUserIdFromToken(token);
+            }
         }
-
-        String userId = getUserIdFromToken(token);
         List<StatusDto> statuses = statusService.getAllStatuses(boardId, userId);
         return new ResponseEntity<>(statuses, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<StatusDto> getStatusById(@PathVariable String boardId, @PathVariable int id,
-                                                   @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                                                   @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String userId = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtTokenUtils.validateToken(token)) {
+                userId = getUserIdFromToken(token);
+            }
         }
-
-        String userId = getUserIdFromToken(token);
         StatusDto status = statusService.getStatusById(boardId, id, userId);
         return new ResponseEntity<>(status, HttpStatus.OK);
     }

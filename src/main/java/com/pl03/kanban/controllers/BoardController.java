@@ -1,5 +1,6 @@
 package com.pl03.kanban.controllers;
 
+import com.pl03.kanban.exceptions.UnauthorizedAccessException;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
@@ -51,28 +52,29 @@ public class BoardController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BoardResponse> getBoardById(@PathVariable String id, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ResponseEntity<BoardResponse> getBoardById(@PathVariable String id,
+                                                      @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String requesterOid = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtTokenUtils.validateToken(token)) {
+                requesterOid = getUserIdFromToken(token);
+            }
         }
-
-        Claims claims = (Claims) jwtTokenUtils.getClaimsFromToken(token);
-        String requesterOid = claims.get("oid", String.class);
 
         BoardResponse response = boardService.getBoardById(id, requesterOid);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<BoardResponse>> getAllBoards(@RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ResponseEntity<List<BoardResponse>> getAllBoards(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String requesterOid = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtTokenUtils.validateToken(token)) {
+                requesterOid = getUserIdFromToken(token);
+            }
         }
-
-        Claims claims = (Claims) jwtTokenUtils.getClaimsFromToken(token);
-        String requesterOid = claims.get("oid", String.class);
 
         List<BoardResponse> responseList = boardService.getAllBoards(requesterOid);
         return ResponseEntity.ok(responseList);
@@ -88,8 +90,7 @@ public class BoardController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Claims claims = (Claims) jwtTokenUtils.getClaimsFromToken(token);
-        String ownerOid = claims.get("oid", String.class);
+        String ownerOid = getUserIdFromToken(token);
 
         String visibility = updateRequest.get("visibility");
         if (visibility == null) {
@@ -100,4 +101,8 @@ public class BoardController {
         return ResponseEntity.ok(response);
     }
 
+    private String getUserIdFromToken(String token) {
+        Map<String, Object> claims = jwtTokenUtils.getClaimsFromToken(token);
+        return (String) claims.get("oid");
+    }
 }

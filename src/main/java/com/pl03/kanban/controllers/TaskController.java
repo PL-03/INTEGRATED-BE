@@ -40,13 +40,16 @@ public class TaskController {
             @PathVariable String boardId,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) List<String> filterStatuses,
-            @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String userId = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtTokenUtils.validateToken(token)) {
+                userId = getUserIdFromToken(token);
+            }
         }
 
-        String userId = getUserIdFromToken(token);
+
         List<GetAllTaskDto> allTasks = taskV3Service.getAllTasks(boardId, sortBy, filterStatuses, userId);
         return ResponseEntity.status(HttpStatus.OK).body(allTasks);
     }
@@ -68,13 +71,15 @@ public class TaskController {
 
     @GetMapping("/{taskId}")
     public ResponseEntity<TaskDetailDto> getTaskById(@PathVariable String boardId, @PathVariable int taskId,
-                                                     @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                                                     @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String userId = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtTokenUtils.validateToken(token)) {
+                userId = getUserIdFromToken(token);
+            }
         }
 
-        String userId = getUserIdFromToken(token);
         TaskDetailDto taskDto = taskV3Service.getTaskById(boardId, taskId, userId);
         return ResponseEntity.ok(taskDto);
     }

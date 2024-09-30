@@ -11,4 +11,6 @@ public interface BoardService {
     BoardResponse getBoardById(String id, String ownerName);
     List<BoardResponse> getAllBoards(String requesterOid);
     BoardResponse updateBoardVisibility(String boardId, String visibility, String ownerOid);
+
+//    boolean isOwner(String boardId, String requesterOid);
 }

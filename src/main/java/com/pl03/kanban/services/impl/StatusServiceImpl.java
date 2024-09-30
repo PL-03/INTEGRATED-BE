@@ -50,13 +50,13 @@ public class StatusServiceImpl implements StatusService {
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         //check ownership
-        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
+        if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
             ErrorResponse errorResponse = new ErrorResponse(
                     HttpStatus.FORBIDDEN.value(),
                     "Only the board owner can access a private board",
                     "Authorization error"
             );
-            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
         }
 
         List<StatusV3> statusV3s = statusV3Repository.findByBoardId(boardId);
@@ -71,13 +71,13 @@ public class StatusServiceImpl implements StatusService {
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         //check ownership
-        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
+        if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
             ErrorResponse errorResponse = new ErrorResponse(
                     HttpStatus.FORBIDDEN.value(),
                     "Only the board owner can access a private board",
                     "Authorization error"
             );
-            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
         }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
@@ -99,7 +99,7 @@ public class StatusServiceImpl implements StatusService {
                     "Only the board owner can access a private board",
                     "Authorization error"
             );
-            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
         }
 
         ErrorResponse errorResponse = validateStatusFields(statusDto.getName(), statusDto.getDescription(), 0, boardId);
@@ -127,7 +127,7 @@ public class StatusServiceImpl implements StatusService {
                     "Only the board owner can access a private board",
                     "Authorization error"
             );
-            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
         }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
@@ -174,7 +174,7 @@ public class StatusServiceImpl implements StatusService {
                     "Only the board owner can access a private board",
                     "Authorization error"
             );
-            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
         }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
@@ -206,7 +206,7 @@ public class StatusServiceImpl implements StatusService {
                     "Only the board owner can access a private board",
                     "Authorization error"
             );
-            throw new UnauthorizedAccessException("Unauthorized access", errorResponse.getErrors());
+            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
         }
 
         StatusV3 currentStatusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)

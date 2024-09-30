@@ -30,21 +30,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        if (shouldSkipAuthentication(request)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             String authHeader = request.getHeader("Authorization");
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                setErrorResponse(response, "No token provided");
+                setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "No token provided");
                 return;
             }
 
             String token = authHeader.substring(7);
 
-            // Validate the token before extracting claims
-            if (!jwtTokenUtils.validateToken(token)) {
-                setErrorResponse(response, "Invalid or tampered token");
-                return;
-            }
+            // Validate the token
+            jwtTokenUtils.validateToken(token);
 
             Map<String, Object> claims = jwtTokenUtils.getClaimsFromToken(token);
             JwtUserDetails userDetails = new JwtUserDetails(claims);
@@ -54,26 +56,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            filterChain.doFilter(request, response); // Continue if token is valid
+            filterChain.doFilter(request, response);
         } catch (ExpiredJwtException e) {
-            setErrorResponse(response, "Token has expired");
+            setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token has expired");
         } catch (MalformedJwtException e) {
-            setErrorResponse(response, "Token is not well-formed");
+            setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token is not well-formed");
         } catch (SignatureException e) {
-            setErrorResponse(response, "JWT token has been tampered with");
+            setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT token has been tampered with");
         } catch (IllegalArgumentException e) {
-            setErrorResponse(response, "JWT token compact of handler are invalid");
+            setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT token compact of handler are invalid");
+        } catch (Exception e) {
+            setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "An error occurred while processing the JWT");
         }
-//        catch (Exception e) {
-////            setErrorResponse(response, "An error occurred while processing the JWT");
-////        }
     }
 
-    private void setErrorResponse(HttpServletResponse response, String message) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    private void setErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
         response.setContentType("application/json");
 
-        ErrorResponse errorResponse = new ErrorResponse(HttpServletResponse.SC_UNAUTHORIZED, message, "Authentication error");
+        ErrorResponse errorResponse = new ErrorResponse(status, message, "Authentication error");
 
         ObjectMapper objectMapper = new ObjectMapper();
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
@@ -81,7 +82,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        return "/login".equals(path);
+        return "/login".equals(request.getServletPath()) || shouldSkipAuthentication(request);
+    }
+
+    private boolean shouldSkipAuthentication(HttpServletRequest request) {
+        return request.getMethod().equals("GET") && request.getServletPath().startsWith("/v3/boards");
     }
 }
