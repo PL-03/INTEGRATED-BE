@@ -1,11 +1,18 @@
 package com.pl03.kanban.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.dtos.TaskDetailDto;
+import com.pl03.kanban.exceptions.InvalidTaskFieldException;
+import com.pl03.kanban.exceptions.ItemNotFoundException;
+import com.pl03.kanban.exceptions.UnauthorizedAccessException;
+import com.pl03.kanban.kanban_entities.Board;
+import com.pl03.kanban.kanban_entities.BoardRepository;
+import com.pl03.kanban.services.BoardService;
 import com.pl03.kanban.services.TaskV3Service;
 import com.pl03.kanban.utils.JwtTokenUtils;
-import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,10 +36,13 @@ public class TaskController {
     private final TaskV3Service taskV3Service;
     private final JwtTokenUtils jwtTokenUtils;
 
+    private final BoardRepository boardRepository;
+
     @Autowired
-    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils) {
+    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository) {
         this.taskV3Service = taskV3Service;
         this.jwtTokenUtils = jwtTokenUtils;
+        this.boardRepository = boardRepository;
     }
 
     @GetMapping
@@ -41,7 +51,7 @@ public class TaskController {
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) List<String> filterStatuses,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        String userId = null;
+        String userId = null; //for public access
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwtTokenUtils.validateToken(token)) {
@@ -57,14 +67,11 @@ public class TaskController {
     @PostMapping
     public ResponseEntity<AddEditTaskDto> createTask(
             @PathVariable String boardId,
-            @RequestBody AddEditTaskDto addEditTaskDto,
+            @RequestBody(required = false) AddEditTaskDto addEditTaskDto,
             @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
         String userId = getUserIdFromToken(token);
+
         AddEditTaskDto createdTask = taskV3Service.createTask(boardId, addEditTaskDto, userId);
         return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
     }
@@ -72,7 +79,7 @@ public class TaskController {
     @GetMapping("/{taskId}")
     public ResponseEntity<TaskDetailDto> getTaskById(@PathVariable String boardId, @PathVariable int taskId,
                                                      @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        String userId = null;
+        String userId = null; //for public access
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwtTokenUtils.validateToken(token)) {
@@ -86,7 +93,7 @@ public class TaskController {
 
     @PutMapping("/{taskId}")
     public ResponseEntity<Object> updateTask(@PathVariable String boardId, @PathVariable int taskId,
-                                             @RequestBody AddEditTaskDto addEditTaskDto,
+                                             @RequestBody(required = false) AddEditTaskDto addEditTaskDto,
                                              @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
         String userId = getUserIdFromToken(token);

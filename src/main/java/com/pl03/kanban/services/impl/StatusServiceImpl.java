@@ -1,11 +1,9 @@
 package com.pl03.kanban.services.impl;
 
+import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.StatusDto;
-import com.pl03.kanban.exceptions.ErrorResponse;
-import com.pl03.kanban.exceptions.ItemNotFoundException;
-import com.pl03.kanban.exceptions.UnauthorizedAccessException;
+import com.pl03.kanban.exceptions.*;
 import com.pl03.kanban.kanban_entities.*;
-import com.pl03.kanban.exceptions.InvalidStatusFieldException;
 import com.pl03.kanban.services.StatusService;
 import com.pl03.kanban.utils.ListMapper;
 import org.modelmapper.ModelMapper;
@@ -72,12 +70,7 @@ public class StatusServiceImpl implements StatusService {
 
         //check ownership
         if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Only the board owner can access a private board", null);
         }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
@@ -88,18 +81,10 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto createStatus(String boardId, StatusDto statusDto, String userId) {
-        //find board first
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+        Board board = validateBoardAccessAndOwnership(boardId, userId);
 
-        //check ownership
-        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+        if (statusDto == null || isEmptyStatusDto(statusDto)) {
+            throw new InvalidStatusFieldException("Status's input must have at least status's name to create status", null);
         }
 
         ErrorResponse errorResponse = validateStatusFields(statusDto.getName(), statusDto.getDescription(), 0, boardId);
@@ -116,36 +101,22 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto updateStatus(String boardId, int id, StatusDto updatedStatusDto, String userId) {
-        //find board first
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+        Board board = validateBoardAccessAndOwnership(boardId, userId);
 
-        //check ownership
-        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+        if (updatedStatusDto == null || isEmptyStatusDto(updatedStatusDto)) {
+            throw new InvalidStatusFieldException("Status's input must have at least status's name to update status", null);
         }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
-        ErrorResponse errorResponse = validateStatusFields(updatedStatusDto.getName(), updatedStatusDto.getDescription(), id, boardId);
-
         if (isStatusNameDefault(statusV3.getName())) {
-            if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
-                throw new InvalidStatusFieldException(statusV3.getName() + " cannot be modified", errorResponse.getErrors());
-            } else {
-                throw new InvalidStatusFieldException(statusV3.getName() + " cannot be modified");
-            }
+            throw new InvalidStatusFieldException(statusV3.getName() + " cannot be modified");
         }
 
         // Check if the status name is different before validating for uniqueness
         if (!statusV3.getName().equalsIgnoreCase(updatedStatusDto.getName())) {
-            errorResponse = validateStatusFields(updatedStatusDto.getName(), updatedStatusDto.getDescription(), id, boardId);
+            ErrorResponse errorResponse = validateStatusFields(updatedStatusDto.getName(), updatedStatusDto.getDescription(), id, boardId);
 
             // If validation errors are found, throw an exception
             if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
@@ -160,22 +131,9 @@ public class StatusServiceImpl implements StatusService {
         return modelMapper.map(updatedStatusV3, StatusDto.class);
     }
 
-
     @Override
     public StatusDto deleteStatus(String boardId, int id, String userId) {
-        //find board first
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        //check ownership
-        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
-        }
+        validateBoardAccessAndOwnership(boardId, userId);
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
@@ -201,12 +159,7 @@ public class StatusServiceImpl implements StatusService {
 
         //check ownership
         if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Only the board owner can access a private board", null);
         }
 
         StatusV3 currentStatusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
@@ -229,6 +182,21 @@ public class StatusServiceImpl implements StatusService {
         statusV3Repository.delete(currentStatusV3);
     }
 
+    private Board validateBoardAccessAndOwnership(String boardId, String userId) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        if (!board.getUser().getOid().equals(userId)) {
+            throw new UnauthorizedAccessException("Only the board owner can perform this operation", null);
+        }
+
+        return board;
+    }
+
+    private boolean isEmptyStatusDto(StatusDto dto) {
+        return (dto.getName() == null || dto.getName().trim().isEmpty()) &&
+                (dto.getDescription() == null || dto.getDescription().trim().isEmpty());
+    }
 
     private ErrorResponse validateStatusFields(String name, String description, int currentStatusId, String boardId) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details", "");

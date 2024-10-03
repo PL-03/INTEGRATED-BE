@@ -65,9 +65,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT token has been tampered with");
         } catch (IllegalArgumentException e) {
             setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT token compact of handler are invalid");
-        } catch (Exception e) {
-            setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "An error occurred while processing the JWT");
         }
+//        catch (Exception e) {
+//            setErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "An error occurred while processing the JWT");
+//        }
     }
 
     private void setErrorResponse(HttpServletResponse response, int status, String message) throws IOException {

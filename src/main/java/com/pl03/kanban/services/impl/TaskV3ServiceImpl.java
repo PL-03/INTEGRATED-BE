@@ -49,18 +49,18 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
     @Override
     public AddEditTaskDto createTask(String boardId, AddEditTaskDto addEditTaskDto, String userId) {
-        //find board
+        // Find board first
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        //ownership checking
+        // Authorization check (do this first)
         if (!board.getUser().getOid().equals(userId)) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can create tasks",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Only the board owner can create tasks", null);
+        }
+
+        // Check if DTO is null or empty
+        if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
+            throw new InvalidTaskFieldException("Task's input must have at least task's title to create task", null);
         }
 
         // Validate task fields
@@ -97,12 +97,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
         //check ownership
         if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Only the board owner can access a private board", null);
         }
 
         List<TaskV3> tasks;
@@ -132,12 +127,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
         //ownership checking
         if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Only the board owner can access a private board", null);
         }
 
         TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
@@ -160,16 +150,9 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
         //ownership checking
         if (!board.getUser().getOid().equals(userId)) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can create tasks",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Only the board owner can delete tasks", null);
         }
 
-        boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
@@ -185,12 +168,11 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
         //ownership checking
         if (!board.getUser().getOid().equals(userId)) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can create tasks",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Only the board owner can edit tasks", null);
+        }
+
+        if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
+            throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
         }
 
         // Check if the task exists in the board
@@ -227,6 +209,13 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
         // Return the mapped DTO
         return modelMapper.map(updatedTask, AddEditTaskDto.class);
+    }
+
+    private boolean isEmptyTaskDto(AddEditTaskDto dto) {
+        return (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) &&
+                (dto.getDescription() == null || dto.getDescription().trim().isEmpty()) &&
+                (dto.getAssignees() == null || dto.getAssignees().trim().isEmpty()) &&
+                (dto.getStatus() == null || dto.getStatus().trim().isEmpty());
     }
 
     private ErrorResponse validateTaskFields(AddEditTaskDto addEditTaskDto) {

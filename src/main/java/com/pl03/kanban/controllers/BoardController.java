@@ -1,6 +1,5 @@
 package com.pl03.kanban.controllers;
 
-import com.pl03.kanban.exceptions.UnauthorizedAccessException;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
@@ -36,6 +35,7 @@ public class BoardController {
         this.jwtTokenUtils = jwtTokenUtils;
     }
 
+    //body required is false because of the order of exceptions. the 403 must be caught before 400
     @PostMapping
     public ResponseEntity<BoardResponse> createBoard(@RequestBody BoardRequest request, @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
@@ -81,9 +81,9 @@ public class BoardController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<BoardResponse> updateBoardVisibility(
+    public ResponseEntity<?> updateBoardVisibility(
             @PathVariable String id,
-            @RequestBody Map<String, String> updateRequest,
+            @RequestBody(required = false) Map<String, String> updateRequest,
             @RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
         if (!jwtTokenUtils.validateToken(token)) {
@@ -92,13 +92,18 @@ public class BoardController {
 
         String ownerOid = getUserIdFromToken(token);
 
-        String visibility = updateRequest.get("visibility");
-        if (visibility == null) {
-            return ResponseEntity.badRequest().body(null);
-        }
-
-        BoardResponse response = boardService.updateBoardVisibility(id, visibility, ownerOid);
+        BoardResponse response = boardService.updateBoardVisibility(id, updateRequest, ownerOid);
         return ResponseEntity.ok(response);
+
+//        try {
+//
+//        } catch (UnauthorizedAccessException e) {
+//            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+//        } catch (InvalidBoardFieldException e) {
+//            return ResponseEntity.badRequest().body(e.getMessage());
+//        } catch (ItemNotFoundException e) {
+//            return ResponseEntity.notFound().build();
+//        }
     }
 
     private String getUserIdFromToken(String token) {

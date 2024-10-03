@@ -1,6 +1,9 @@
 package com.pl03.kanban.controllers;
 
 import com.pl03.kanban.dtos.StatusDto;
+import com.pl03.kanban.exceptions.InvalidStatusFieldException;
+import com.pl03.kanban.exceptions.ItemNotFoundException;
+import com.pl03.kanban.exceptions.UnauthorizedAccessException;
 import com.pl03.kanban.services.StatusService;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,14 +37,10 @@ public class StatusController {
     }
 
     @PostMapping
-    public ResponseEntity<StatusDto> createStatus(@PathVariable String boardId, @RequestBody StatusDto status,
-                                                  @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String userId = getUserIdFromToken(token);
+    public ResponseEntity<?> createStatus(@PathVariable String boardId,
+                                          @RequestBody(required = false) StatusDto status,
+                                          @RequestHeader("Authorization") String authHeader) {
+        String userId = validateTokenAndGetUserId(authHeader);
         StatusDto createdStatus = statusService.createStatus(boardId, status, userId);
         return new ResponseEntity<>(createdStatus, HttpStatus.CREATED);
     }
@@ -49,7 +48,7 @@ public class StatusController {
     @GetMapping
     public ResponseEntity<List<StatusDto>> getAllStatuses(@PathVariable String boardId,
                                                           @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        String userId = null;
+        String userId = null; //for public access
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwtTokenUtils.validateToken(token)) {
@@ -63,7 +62,7 @@ public class StatusController {
     @GetMapping("/{id}")
     public ResponseEntity<StatusDto> getStatusById(@PathVariable String boardId, @PathVariable int id,
                                                    @RequestHeader(value = "Authorization", required = false) String authHeader) {
-        String userId = null;
+        String userId = null; //for public access
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwtTokenUtils.validateToken(token)) {
@@ -75,14 +74,10 @@ public class StatusController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StatusDto> updateStatus(@PathVariable String boardId, @PathVariable int id,
-                                                  @RequestBody StatusDto status, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String userId = getUserIdFromToken(token);
+    public ResponseEntity<?> updateStatus(@PathVariable String boardId, @PathVariable int id,
+                                          @RequestBody(required = false) StatusDto status,
+                                          @RequestHeader("Authorization") String authHeader) {
+        String userId = validateTokenAndGetUserId(authHeader);
         StatusDto updatedStatus = statusService.updateStatus(boardId, id, status, userId);
         return new ResponseEntity<>(updatedStatus, HttpStatus.OK);
     }
@@ -90,12 +85,7 @@ public class StatusController {
     @DeleteMapping("/{id}")
     public ResponseEntity<StatusDto> deleteStatus(@PathVariable String boardId, @PathVariable int id,
                                                   @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String userId = getUserIdFromToken(token);
+        String userId = validateTokenAndGetUserId(authHeader);
         StatusDto deletedStatus = statusService.deleteStatus(boardId, id, userId);
         return new ResponseEntity<>(deletedStatus, HttpStatus.OK);
     }
@@ -103,14 +93,20 @@ public class StatusController {
     @DeleteMapping("/{id}/{newStatusId}")
     public ResponseEntity<Void> deleteStatusAndTransferTasks(@PathVariable String boardId, @PathVariable int id,
                                                              @PathVariable int newStatusId, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
-        if (!jwtTokenUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String userId = getUserIdFromToken(token);
+        String userId = validateTokenAndGetUserId(authHeader);
         statusService.deleteStatusAndTransferTasks(boardId, id, newStatusId, userId);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private String validateTokenAndGetUserId(String authHeader) throws UnauthorizedAccessException {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new UnauthorizedAccessException("Invalid Authorization header", null);
+        }
+        String token = authHeader.substring(7);
+        if (!jwtTokenUtils.validateToken(token)) {
+            throw new UnauthorizedAccessException("Invalid token", null);
+        }
+        return getUserIdFromToken(token);
     }
 
     private String getUserIdFromToken(String token) {

@@ -2,10 +2,7 @@ package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
-import com.pl03.kanban.exceptions.ErrorResponse;
-import com.pl03.kanban.exceptions.InvalidBoardFieldException;
-import com.pl03.kanban.exceptions.ItemNotFoundException;
-import com.pl03.kanban.exceptions.UnauthorizedAccessException;
+import com.pl03.kanban.exceptions.*;
 import com.pl03.kanban.kanban_entities.Board;
 import com.pl03.kanban.kanban_entities.BoardRepository;
 import com.pl03.kanban.kanban_entities.Users;
@@ -19,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -111,25 +109,31 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
-    public BoardResponse updateBoardVisibility(String boardId, String visibility, String ownerOid) {
+    public BoardResponse updateBoardVisibility(String boardId, Map<String, String> updateRequest, String ownerOid) {
         // Fetch the board by id
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + boardId));
 
         // Verify if the requester is the board owner
         if (!board.getUser().getOid().equals(ownerOid)) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can change the visibility",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+            throw new UnauthorizedAccessException("Only the board owner can change the visibility", null);
         }
 
-        // Update the visibility
-        try {
-            board.setVisibility(Board.Visibility.valueOf(visibility.toUpperCase()));
-        } catch (IllegalArgumentException e) {
+        // Check if updateRequest is null or empty
+        if (updateRequest == null || updateRequest.isEmpty()) {
+            throw new InvalidBoardFieldException("Request body must not be empty", null);
+        }
+
+        String visibility = updateRequest.get("visibility");
+        if (visibility == null || visibility.isEmpty()) {
+            throw new InvalidBoardFieldException("Body must have 'visibility' value to update board's visibility", null);
+        }
+
+        // Convert visibility to uppercase for comparison, but keep original for error message if needed
+        String uppercaseVisibility = visibility.toUpperCase();
+        if (uppercaseVisibility.equals("PRIVATE") || uppercaseVisibility.equals("PUBLIC")) {
+            board.setVisibility(Board.Visibility.valueOf(uppercaseVisibility));
+        } else {
             ErrorResponse errorResponse = new ErrorResponse(
                     HttpStatus.BAD_REQUEST.value(),
                     "Invalid visibility value",
@@ -139,11 +143,9 @@ public class BoardServiceImpl implements BoardService {
             throw new InvalidBoardFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
-        // Save the updated board
-        board = boardRepository.save(board);
-
-        // Return the updated BoardResponse
-        return createBoardResponse(board, board.getUser().getName());
+        // Save and return the updated board
+        Board updatedBoard = boardRepository.save(board);
+        return createBoardResponse(updatedBoard, updatedBoard.getUser().getName());
     }
 
 //    @Override
@@ -153,11 +155,19 @@ public class BoardServiceImpl implements BoardService {
 //        return board.getUser().getOid().equals(userOid);
 //    }
 
+//    private BoardResponse createBoardResponse(Board board, String ownerName) {
+//        BoardResponse response = modelMapper.map(board, BoardResponse.class);
+//        response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));  // Get OID from user
+//        return response;
+//    }
     private BoardResponse createBoardResponse(Board board, String ownerName) {
-        BoardResponse response = modelMapper.map(board, BoardResponse.class);
-        response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));  // Get OID from user
+        BoardResponse response = new BoardResponse(); // using manual mapping because of avoiding potential issue
+        response.setId(board.getId());                  // with enum value
+        response.setName(board.getName());
+        response.setVisibility(BoardResponse.Visibility.valueOf(board.getVisibility().name()));
+        response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));
         return response;
-    }
+}
 
 
 
