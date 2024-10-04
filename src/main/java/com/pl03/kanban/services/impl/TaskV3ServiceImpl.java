@@ -49,14 +49,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
     @Override
     public AddEditTaskDto createTask(String boardId, AddEditTaskDto addEditTaskDto, String userId) {
-        // Find board first
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        // Authorization check (do this first)
-        if (!board.getUser().getOid().equals(userId)) {
-            throw new UnauthorizedAccessException("Only the board owner can create tasks", null);
-        }
+        Board board = validateBoardAccessAndOwnership(boardId, userId);
 
         // Check if DTO is null or empty
         if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
@@ -144,15 +137,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
     @Override
     public AddEditTaskDto deleteTaskById(String boardId, int taskId, String userId) {
-        //find board
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        //ownership checking
-        if (!board.getUser().getOid().equals(userId)) {
-            throw new UnauthorizedAccessException("Only the board owner can delete tasks", null);
-        }
-
+        validateBoardAccessAndOwnership(boardId, userId);
 
         TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
@@ -162,14 +147,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
     @Override
     public AddEditTaskDto updateTask(String boardId, int taskId, AddEditTaskDto addEditTaskDto, String userId) {
-        //find board
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        //ownership checking
-        if (!board.getUser().getOid().equals(userId)) {
-            throw new UnauthorizedAccessException("Only the board owner can edit tasks", null);
-        }
+        validateBoardAccessAndOwnership(boardId, userId);
 
         if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
             throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
@@ -209,6 +187,17 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
         // Return the mapped DTO
         return modelMapper.map(updatedTask, AddEditTaskDto.class);
+    }
+
+    private Board validateBoardAccessAndOwnership(String boardId, String userId) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        if (!board.getUser().getOid().equals(userId)) {
+            throw new UnauthorizedAccessException("Only the board owner can perform this operation", null);
+        }
+
+        return board;
     }
 
     private boolean isEmptyTaskDto(AddEditTaskDto dto) {

@@ -101,7 +101,7 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto updateStatus(String boardId, int id, StatusDto updatedStatusDto, String userId) {
-        Board board = validateBoardAccessAndOwnership(boardId, userId);
+        validateBoardAccessAndOwnership(boardId, userId);
 
         if (updatedStatusDto == null || isEmptyStatusDto(updatedStatusDto)) {
             throw new InvalidStatusFieldException("Status's input must have at least status's name to update status", null);

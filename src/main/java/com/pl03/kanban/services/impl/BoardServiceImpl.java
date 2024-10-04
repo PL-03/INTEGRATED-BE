@@ -169,8 +169,6 @@ public class BoardServiceImpl implements BoardService {
         return response;
 }
 
-
-
     // Validation method for the board name
     private ErrorResponse validateBoardFields(BoardRequest boardRequest) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation error. Check 'errors' field for details", "");
