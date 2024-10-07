@@ -100,6 +100,9 @@ DELETE FROM taskv3 WHERE boardId = boardIdToDelete;
 -- Then delete all statuses associated with the board
 DELETE FROM statusv3 WHERE boardId = boardIdToDelete;
 
+-- Then delete all collaborators associated with the board
+DELETE FROM board_collaborators WHERE boardId = boardIdToDelete;
+
 -- Finally delete the board
 DELETE FROM board WHERE boardId = boardIdToDelete;
 END //
