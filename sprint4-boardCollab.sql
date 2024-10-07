@@ -29,12 +29,12 @@ DROP TABLE IF EXISTS board;
 
 -- Create the board table with visibility ENUM column
 CREATE TABLE board (
-                       boardId varchar(10) NOT NULL,
-                       name varchar(120) NOT NULL,
-                       oid varchar(36) NOT NULL,
+                       boardId VARCHAR(10) NOT NULL,
+                       name VARCHAR(120) NOT NULL,
+                       oid VARCHAR(36) NOT NULL,
                        visibility ENUM('PUBLIC', 'PRIVATE') NOT NULL DEFAULT 'PRIVATE', -- Visibility column with default value 'PRIVATE'
-                       createdOn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                       updatedOn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                       createdOn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                       updatedOn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                        PRIMARY KEY (boardId),
                        CONSTRAINT fk_board_user FOREIGN KEY (oid) REFERENCES users(oid) -- Foreign key to users table
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -44,12 +44,12 @@ DROP TABLE IF EXISTS statusv3;
 
 -- Create the statusv3 table
 CREATE TABLE statusv3 (
-                          statusId int NOT NULL AUTO_INCREMENT,
-                          statusName varchar(50) NOT NULL,
-                          statusDescription varchar(200) DEFAULT NULL,
-                          boardId varchar(10) NOT NULL,
-                          createdOn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                          updatedOn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                          statusId INT NOT NULL AUTO_INCREMENT,
+                          statusName VARCHAR(50) NOT NULL,
+                          statusDescription VARCHAR(200) DEFAULT NULL,
+                          boardId VARCHAR(10) NOT NULL,
+                          createdOn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                          updatedOn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                           PRIMARY KEY (statusId),
                           KEY fk_statusv3_board1_idx (boardId),
                           CONSTRAINT fk_statusv3_board1 FOREIGN KEY (boardId) REFERENCES board (boardId)
@@ -60,14 +60,14 @@ DROP TABLE IF EXISTS taskv3;
 
 -- Create the taskv3 table
 CREATE TABLE taskv3 (
-                        id int NOT NULL AUTO_INCREMENT,
-                        taskTitle varchar(100) NOT NULL,
-                        taskDescription varchar(500) DEFAULT NULL,
-                        taskAssignees varchar(30) DEFAULT NULL,
-                        taskStatusId int NOT NULL DEFAULT '1',
-                        createdOn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updatedOn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        boardId varchar(10) NOT NULL,
+                        id INT NOT NULL AUTO_INCREMENT,
+                        taskTitle VARCHAR(100) NOT NULL,
+                        taskDescription VARCHAR(500) DEFAULT NULL,
+                        taskAssignees VARCHAR(30) DEFAULT NULL,
+                        taskStatusId INT NOT NULL DEFAULT '1',
+                        createdOn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updatedOn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        boardId VARCHAR(10) NOT NULL,
                         PRIMARY KEY (id),
                         UNIQUE KEY id_UNIQUE (id),
                         KEY fk_taskv3_taskStatus_idx (taskStatusId),
@@ -76,18 +76,14 @@ CREATE TABLE taskv3 (
                         CONSTRAINT fk_taskv3_taskStatus FOREIGN KEY (taskStatusId) REFERENCES statusv3 (statusId)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Create the board_collaborators table for managing collaboration with access levels
-DROP TABLE IF EXISTS board_collaborators;
-
+-- Create the BoardCollaborators table
 CREATE TABLE board_collaborators (
-                                     collaboratorId INT NOT NULL AUTO_INCREMENT,
                                      boardId VARCHAR(10) NOT NULL,
-                                     userId CHAR(36) NOT NULL,
-                                     accessLevel ENUM('READ', 'WRITE') NOT NULL DEFAULT 'READ', -- Access level: READ or WRITE
-                                     PRIMARY KEY (collaboratorId),
-                                     UNIQUE KEY unique_collaborator (boardId, userId), -- Ensure unique user-board relationship
-                                     CONSTRAINT fk_collaborators_board FOREIGN KEY (boardId) REFERENCES board(boardId) ON DELETE CASCADE,
-                                     CONSTRAINT fk_collaborators_user FOREIGN KEY (userId) REFERENCES users(oid) ON DELETE CASCADE
+                                     userId CHAR(36) NOT NULL, -- Reference to user oid
+                                     accessLevel ENUM('READ', 'WRITE') NOT NULL, -- Access level
+                                     PRIMARY KEY (boardId, userId),
+                                     CONSTRAINT fk_collaborator_board FOREIGN KEY (boardId) REFERENCES board (boardId),
+                                     CONSTRAINT fk_collaborator_user FOREIGN KEY (userId) REFERENCES users(oid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Enable foreign key checks again

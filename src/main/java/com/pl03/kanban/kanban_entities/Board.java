@@ -52,6 +52,9 @@ public class Board {
     @Column(name = "updatedOn", nullable = false, insertable = false)
     private Timestamp updatedOn;
 
+    @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BoardCollaborators> collaborators;
+
     @PrePersist
     public void prePersist() {
         generateUniqueId();
