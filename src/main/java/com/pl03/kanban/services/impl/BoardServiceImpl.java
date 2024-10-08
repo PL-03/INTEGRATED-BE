@@ -2,11 +2,10 @@ package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
+import com.pl03.kanban.dtos.CollaboratorRequest;
+import com.pl03.kanban.dtos.CollaboratorResponse;
 import com.pl03.kanban.exceptions.*;
-import com.pl03.kanban.kanban_entities.Board;
-import com.pl03.kanban.kanban_entities.BoardRepository;
-import com.pl03.kanban.kanban_entities.Users;
-import com.pl03.kanban.kanban_entities.UsersRepository;
+import com.pl03.kanban.kanban_entities.*;
 import com.pl03.kanban.services.BoardService;
 import com.pl03.kanban.services.StatusService;
 import com.pl03.kanban.utils.ListMapper;
@@ -24,6 +23,7 @@ public class BoardServiceImpl implements BoardService {
 
     private final BoardRepository boardRepository;
     private final UsersRepository usersRepository;
+    private final BoardCollaboratorsRepository boardCollaboratorsRepository;
     private final ModelMapper modelMapper;
     private final ListMapper listMapper;
     private final StatusService statusService;
@@ -31,9 +31,10 @@ public class BoardServiceImpl implements BoardService {
     private static final int MAX_BOARD_NAME_LENGTH = 120;
 
     @Autowired
-    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, ModelMapper modelMapper, ListMapper listMapper, StatusService statusService) {
+    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, ListMapper listMapper, StatusService statusService) {
         this.boardRepository = boardRepository;
         this.usersRepository = usersRepository;
+        this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.modelMapper = modelMapper;
         this.listMapper = listMapper;
         this.statusService = statusService;
@@ -160,6 +161,87 @@ public class BoardServiceImpl implements BoardService {
 //        response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));  // Get OID from user
 //        return response;
 //    }
+@Override
+public List<CollaboratorResponse> getBoardCollaborators(String boardId, String requesterOid) {
+    Board board = getBoardAndCheckAccess(boardId, requesterOid);
+
+    List<BoardCollaborators> collaborators = boardCollaboratorsRepository.findByBoardId(boardId);
+    return collaborators.stream()
+            .map(this::mapToCollaboratorResponse)
+            .collect(Collectors.toList());
+}
+
+    @Override
+    public CollaboratorResponse getBoardCollaboratorByOid(String boardId, String collabOid, String requesterOid) {
+        Board board = getBoardAndCheckAccess(boardId, requesterOid);
+
+        BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
+                .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
+
+        return mapToCollaboratorResponse(collaborator);
+    }
+
+    @Override
+    public CollaboratorResponse addBoardCollaborator(String boardId, CollaboratorRequest request, String ownerOid) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        if (!board.getUser().getOid().equals(ownerOid)) {
+            throw new UnauthorizedAccessException("Only the board owner can add collaborators", null);
+        }
+
+        Users user = usersRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ItemNotFoundException("User not found with email: " + request.getEmail()));
+
+        if (user.getOid().equals(ownerOid)) {
+            throw new ConflictException("Cannot add board owner as a collaborator");
+        }
+
+        if (boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, user.getOid())) {
+            throw new ConflictException("User is already a collaborator");
+        }
+
+        BoardCollaborators.AccessLevel accessLevel;
+        try {
+            accessLevel = BoardCollaborators.AccessLevel.valueOf(request.getAccessRight().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
+        }
+
+        BoardCollaborators collaborator = new BoardCollaborators();
+        collaborator.setId(new BoardCollaboratorsId(board.getId(), user.getOid()));
+        collaborator.setBoard(board);
+        collaborator.setUser(user);
+        collaborator.setAccessLevel(accessLevel);
+        collaborator.setName(user.getName());
+        collaborator.setEmail(user.getEmail());
+
+        BoardCollaborators savedCollaborator = boardCollaboratorsRepository.save(collaborator);
+        return mapToCollaboratorResponse(savedCollaborator);
+    }
+
+    private Board getBoardAndCheckAccess(String boardId, String requesterOid) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        if (board.getVisibility() != Board.Visibility.PUBLIC &&
+                !board.getUser().getOid().equals(requesterOid) &&
+                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, requesterOid)) {
+            throw new UnauthorizedAccessException("Access to this board is restricted", null);
+        }
+
+        return board;
+    }
+
+    private CollaboratorResponse mapToCollaboratorResponse(BoardCollaborators collaborator) {
+        return CollaboratorResponse.builder()
+                .oid(collaborator.getUser().getOid())
+                .name(collaborator.getName())
+                .email(collaborator.getEmail())
+                .accessRight(collaborator.getAccessLevel().name())
+                .addedOn(collaborator.getAddedOn())
+                .build();
+    }
     private BoardResponse createBoardResponse(Board board, String ownerName) {
         BoardResponse response = new BoardResponse(); // using manual mapping because of avoiding potential issue
         response.setId(board.getId());                  // with enum value

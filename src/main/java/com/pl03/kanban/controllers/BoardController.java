@@ -1,5 +1,7 @@
 package com.pl03.kanban.controllers;
 
+import com.pl03.kanban.dtos.CollaboratorRequest;
+import com.pl03.kanban.dtos.CollaboratorResponse;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
@@ -104,6 +106,44 @@ public class BoardController {
 //        } catch (ItemNotFoundException e) {
 //            return ResponseEntity.notFound().build();
 //        }
+    }
+    @GetMapping("/{id}/collabs")
+    public ResponseEntity<List<CollaboratorResponse>> getBoardCollaborators(
+            @PathVariable String id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String requesterOid = getRequesterOid(authHeader);
+        List<CollaboratorResponse> collaborators = boardService.getBoardCollaborators(id, requesterOid);
+        return ResponseEntity.ok(collaborators);
+    }
+
+    @GetMapping("/{id}/collabs/{collabOid}")
+    public ResponseEntity<CollaboratorResponse> getBoardCollaboratorByOid(
+            @PathVariable String id,
+            @PathVariable String collabOid,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String requesterOid = getRequesterOid(authHeader);
+        CollaboratorResponse collaborator = boardService.getBoardCollaboratorByOid(id, collabOid, requesterOid);
+        return ResponseEntity.ok(collaborator);
+    }
+
+    @PostMapping("/{id}/collabs")
+    public ResponseEntity<CollaboratorResponse> addBoardCollaborator(
+            @PathVariable String id,
+            @RequestBody CollaboratorRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        String ownerOid = getUserIdFromToken(authHeader.substring(7));
+        CollaboratorResponse response = boardService.addBoardCollaborator(id, request, ownerOid);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    private String getRequesterOid(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtTokenUtils.validateToken(token)) {
+                return getUserIdFromToken(token);
+            }
+        }
+        return null;
     }
 
     private String getUserIdFromToken(String token) {

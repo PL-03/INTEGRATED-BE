@@ -3,6 +3,9 @@ package com.pl03.kanban.kanban_entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldNameConstants;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.sql.Timestamp;
 
 @Getter
 @Setter
@@ -30,6 +33,16 @@ public class BoardCollaborators {
     @Enumerated(EnumType.STRING)
     @Column(name = "accessLevel", nullable = false)
     private AccessLevel accessLevel; // Access level for the collaborator
+
+    @Column(name = "addedOn", nullable = false, updatable = false)
+    @CreationTimestamp
+    private Timestamp addedOn;
+
+    @Column(name = "name", length = 100, nullable = false)
+    private String name; // Name of the collaborator
+
+    @Column(name = "email", length = 50, nullable = false)
+    private String email; // Email of the collaborator
 
     public enum AccessLevel {
         READ, WRITE

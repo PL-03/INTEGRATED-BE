@@ -3,6 +3,8 @@ package com.pl03.kanban.services;
 
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
+import com.pl03.kanban.dtos.CollaboratorRequest;
+import com.pl03.kanban.dtos.CollaboratorResponse;
 
 import java.util.List;
 import java.util.Map;
@@ -14,4 +16,7 @@ public interface BoardService {
     BoardResponse updateBoardVisibility(String boardId, Map<String, String> updateRequest, String ownerOid);
 
 //    boolean isOwner(String boardId, String requesterOid);
+List<CollaboratorResponse> getBoardCollaborators(String boardId, String requesterOid);
+    CollaboratorResponse getBoardCollaboratorByOid(String boardId, String collabOid, String requesterOid);
+    CollaboratorResponse addBoardCollaborator(String boardId, CollaboratorRequest request, String ownerOid);
 }

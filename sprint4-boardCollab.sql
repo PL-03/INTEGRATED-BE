@@ -76,11 +76,17 @@ CREATE TABLE taskv3 (
                         CONSTRAINT fk_taskv3_taskStatus FOREIGN KEY (taskStatusId) REFERENCES statusv3 (statusId)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- Drop existing board_collaborators table if exists
+DROP TABLE IF EXISTS board_collaborators;
+
 -- Create the BoardCollaborators table
 CREATE TABLE board_collaborators (
                                      boardId VARCHAR(10) NOT NULL,
                                      userId CHAR(36) NOT NULL, -- Reference to user oid
                                      accessLevel ENUM('READ', 'WRITE') NOT NULL, -- Access level
+                                     addedOn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Timestamp when collaborator was added
+                                     name VARCHAR(100) NOT NULL, -- Collaborator name, same length as in users table
+                                     email VARCHAR(50) NOT NULL, -- Collaborator email, same length as in users table
                                      PRIMARY KEY (boardId, userId),
                                      CONSTRAINT fk_collaborator_board FOREIGN KEY (boardId) REFERENCES board (boardId),
                                      CONSTRAINT fk_collaborator_user FOREIGN KEY (userId) REFERENCES users(oid)
@@ -89,7 +95,7 @@ CREATE TABLE board_collaborators (
 -- Enable foreign key checks again
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 
--- Stored Procedure to delete board and associated tasks and statuses
+-- Stored Procedure to delete board and associated tasks, statuses, and collaborators
 DROP PROCEDURE IF EXISTS DeleteBoard;
 DELIMITER //
 CREATE PROCEDURE DeleteBoard(IN boardIdToDelete VARCHAR(10))
