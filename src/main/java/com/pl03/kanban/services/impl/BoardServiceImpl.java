@@ -226,7 +226,7 @@ public List<CollaboratorResponse> getBoardCollaborators(String boardId, String r
 
         if (board.getVisibility() != Board.Visibility.PUBLIC &&
                 !board.getUser().getOid().equals(requesterOid) &&
-                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, requesterOid)) {
+                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, requesterOid)) { //check is a collaborator or not
             throw new UnauthorizedAccessException("Access to this board is restricted", null);
         }
 

@@ -22,15 +22,17 @@ import java.util.*;
 public class TaskV3ServiceImpl implements TaskV3Service {
     private final TaskV3Repository taskV3Repository;
     private final StatusV3Repository statusV3Repository;
+    private final BoardCollaboratorsRepository boardCollaboratorsRepository;
     private final ModelMapper modelMapper;
     private final ListMapper listMapper;
     private final BoardRepository boardRepository;
 
     @Autowired
     public TaskV3ServiceImpl(TaskV3Repository taskV3Repository, StatusV3Repository statusV3Repository,
-                             ModelMapper modelMapper, ListMapper listMapper, BoardRepository boardRepository) {
+                             BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, ListMapper listMapper, BoardRepository boardRepository) {
         this.taskV3Repository = taskV3Repository;
         this.statusV3Repository = statusV3Repository;
+        this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.modelMapper = modelMapper;
         this.listMapper = listMapper;
         this.boardRepository = boardRepository;
@@ -88,9 +90,10 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        //check ownership
-        if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
-            throw new UnauthorizedAccessException("Only the board owner can access a private board", null);
+        if (board.getVisibility() != Board.Visibility.PUBLIC &&
+                !board.getUser().getOid().equals(userId) && //check ownership
+                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
+            throw new UnauthorizedAccessException("Access to this board is restricted", null);
         }
 
         List<TaskV3> tasks;
@@ -118,9 +121,10 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        //ownership checking
-        if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
-            throw new UnauthorizedAccessException("Only the board owner can access a private board", null);
+        if (board.getVisibility() != Board.Visibility.PUBLIC &&
+                !board.getUser().getOid().equals(userId) && //check ownership
+                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
+            throw new UnauthorizedAccessException("Access to this board is restricted", null);
         }
 
         TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)

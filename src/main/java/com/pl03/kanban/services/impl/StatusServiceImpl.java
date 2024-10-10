@@ -1,6 +1,5 @@
 package com.pl03.kanban.services.impl;
 
-import com.pl03.kanban.dtos.AddEditTaskDto;
 import com.pl03.kanban.dtos.StatusDto;
 import com.pl03.kanban.exceptions.*;
 import com.pl03.kanban.kanban_entities.*;
@@ -19,6 +18,7 @@ public class StatusServiceImpl implements StatusService {
     private final StatusV3Repository statusV3Repository;
     private final TaskV3Repository taskV3Repository;
     private final BoardRepository boardRepository;
+    private final BoardCollaboratorsRepository boardCollaboratorsRepository;
     private final ListMapper listMapper;
     private final ModelMapper modelMapper;
 
@@ -27,10 +27,11 @@ public class StatusServiceImpl implements StatusService {
     private static final int MAX_STATUS_DESCRIPTION_LENGTH = 200;
 
     @Autowired
-    public StatusServiceImpl(StatusV3Repository statusV3Repository, TaskV3Repository taskV3Repository, BoardRepository boardRepository, ListMapper listMapper, ModelMapper modelMapper) {
+    public StatusServiceImpl(StatusV3Repository statusV3Repository, TaskV3Repository taskV3Repository, BoardRepository boardRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, ListMapper listMapper, ModelMapper modelMapper) {
         this.statusV3Repository = statusV3Repository;
         this.taskV3Repository = taskV3Repository;
         this.boardRepository = boardRepository;
+        this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.listMapper = listMapper;
         this.modelMapper = modelMapper;
     }
@@ -47,14 +48,10 @@ public class StatusServiceImpl implements StatusService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        //check ownership
-        if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
-            ErrorResponse errorResponse = new ErrorResponse(
-                    HttpStatus.FORBIDDEN.value(),
-                    "Only the board owner can access a private board",
-                    "Authorization error"
-            );
-            throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+        if (board.getVisibility() != Board.Visibility.PUBLIC &&
+                !board.getUser().getOid().equals(userId) && //check ownership
+                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
+            throw new UnauthorizedAccessException("Access to this board is restricted", null);
         }
 
         List<StatusV3> statusV3s = statusV3Repository.findByBoardId(boardId);
@@ -68,9 +65,10 @@ public class StatusServiceImpl implements StatusService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        //check ownership
-        if (board.getVisibility() != Board.Visibility.PUBLIC && (userId == null || !board.getUser().getOid().equals(userId))) {
-            throw new UnauthorizedAccessException("Only the board owner can access a private board", null);
+        if (board.getVisibility() != Board.Visibility.PUBLIC &&
+                !board.getUser().getOid().equals(userId) && //check ownership
+                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
+            throw new UnauthorizedAccessException("Access to this board is restricted", null);
         }
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
