@@ -87,14 +87,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     @Override
     public List<GetAllTaskDto> getAllTasks(String boardId, String sortBy, List<String> filterStatuses, String userId) {
         //find board first
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        if (board.getVisibility() != Board.Visibility.PUBLIC &&
-                !board.getUser().getOid().equals(userId) && //check ownership
-                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
-            throw new UnauthorizedAccessException("Access to this board is restricted", null);
-        }
+        BoardServiceImpl.getBoardAndCheckAccess(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         List<TaskV3> tasks;
 
@@ -118,14 +111,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     @Override
     public TaskDetailDto getTaskById(String boardId, int taskId, String userId) {
         //find board
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        if (board.getVisibility() != Board.Visibility.PUBLIC &&
-                !board.getUser().getOid().equals(userId) && //check ownership
-                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
-            throw new UnauthorizedAccessException("Access to this board is restricted", null);
-        }
+        BoardServiceImpl.getBoardAndCheckAccess(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));

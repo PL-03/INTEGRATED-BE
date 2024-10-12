@@ -45,14 +45,7 @@ public class StatusServiceImpl implements StatusService {
     @Override
     public List<StatusDto> getAllStatuses(String boardId, String userId) {
         //find board first
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        if (board.getVisibility() != Board.Visibility.PUBLIC &&
-                !board.getUser().getOid().equals(userId) && //check ownership
-                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
-            throw new UnauthorizedAccessException("Access to this board is restricted", null);
-        }
+        BoardServiceImpl.getBoardAndCheckAccess(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         List<StatusV3> statusV3s = statusV3Repository.findByBoardId(boardId);
         return listMapper.mapList(statusV3s, StatusDto.class, modelMapper);
@@ -62,14 +55,7 @@ public class StatusServiceImpl implements StatusService {
     @Override
     public StatusDto getStatusById(String boardId, int id, String userId) {
         //find board first
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        if (board.getVisibility() != Board.Visibility.PUBLIC &&
-                !board.getUser().getOid().equals(userId) && //check ownership
-                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
-            throw new UnauthorizedAccessException("Access to this board is restricted", null);
-        }
+        BoardServiceImpl.getBoardAndCheckAccess(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));

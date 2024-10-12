@@ -8,7 +8,6 @@ import com.pl03.kanban.exceptions.*;
 import com.pl03.kanban.kanban_entities.*;
 import com.pl03.kanban.services.BoardService;
 import com.pl03.kanban.services.StatusService;
-import com.pl03.kanban.utils.ListMapper;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,18 +24,16 @@ public class BoardServiceImpl implements BoardService {
     private final UsersRepository usersRepository;
     private final BoardCollaboratorsRepository boardCollaboratorsRepository;
     private final ModelMapper modelMapper;
-    private final ListMapper listMapper;
     private final StatusService statusService;
 
     private static final int MAX_BOARD_NAME_LENGTH = 120;
 
     @Autowired
-    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, ListMapper listMapper, StatusService statusService) {
+    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, StatusService statusService) {
         this.boardRepository = boardRepository;
         this.usersRepository = usersRepository;
         this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.modelMapper = modelMapper;
-        this.listMapper = listMapper;
         this.statusService = statusService;
     }
 
@@ -81,30 +78,21 @@ public class BoardServiceImpl implements BoardService {
 
     @Override
     public BoardResponse getBoardById(String id, String requesterOid) {
+        getBoardAndCheckAccess(id, requesterOid, boardRepository, boardCollaboratorsRepository);
+
+        // Once validation passes, fetch the board and return the response
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + id));
 
-        // If the board is public or the requester is the owner, return the board
-        if (board.getVisibility() == Board.Visibility.PUBLIC ||
-                (requesterOid != null && board.getUser().getOid().equals(requesterOid))) {
-            return createBoardResponse(board, board.getUser().getName());
-        }
-
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.FORBIDDEN.value(),
-                "Access to this private board is restricted",
-                "Authorization error"
-        );
-        throw new UnauthorizedAccessException(errorResponse.getMessage(), errorResponse.getErrors());
+        return createBoardResponse(board, board.getUser().getName());
     }
-
 
     @Override
     public List<BoardResponse> getAllBoards(String requesterOid) {
         List<Board> boards = boardRepository.findAll();
         return boards.stream()
-                .filter(board -> board.getVisibility() == Board.Visibility.PUBLIC ||
-                        (requesterOid != null && board.getUser().getOid().equals(requesterOid)))
+                .filter(board -> board.getVisibility() == Board.Visibility.PUBLIC || //filter for public board and requesters board
+                        (board.getUser().getOid().equals(requesterOid)))
                 .map(board -> createBoardResponse(board, board.getUser().getName()))
                 .collect(Collectors.toList());
     }
@@ -161,19 +149,19 @@ public class BoardServiceImpl implements BoardService {
 //        response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));  // Get OID from user
 //        return response;
 //    }
-@Override
-public List<CollaboratorResponse> getBoardCollaborators(String boardId, String requesterOid) {
-    Board board = getBoardAndCheckAccess(boardId, requesterOid);
+    @Override
+    public List<CollaboratorResponse> getBoardCollaborators(String boardId, String requesterOid) {
+        getBoardAndCheckAccess(boardId, requesterOid, boardRepository, boardCollaboratorsRepository);
 
-    List<BoardCollaborators> collaborators = boardCollaboratorsRepository.findByBoardId(boardId);
-    return collaborators.stream()
-            .map(this::mapToCollaboratorResponse)
-            .collect(Collectors.toList());
-}
+        List<BoardCollaborators> collaborators = boardCollaboratorsRepository.findByBoardId(boardId);
+        return collaborators.stream()
+                .map(this::mapToCollaboratorResponse)
+                .collect(Collectors.toList());
+    }
 
     @Override
     public CollaboratorResponse getBoardCollaboratorByOid(String boardId, String collabOid, String requesterOid) {
-        Board board = getBoardAndCheckAccess(boardId, requesterOid);
+        getBoardAndCheckAccess(boardId, requesterOid, boardRepository, boardCollaboratorsRepository);
 
         BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
                 .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
@@ -220,17 +208,28 @@ public List<CollaboratorResponse> getBoardCollaborators(String boardId, String r
         return mapToCollaboratorResponse(savedCollaborator);
     }
 
-    private Board getBoardAndCheckAccess(String boardId, String requesterOid) {
+//    private Board getBoardAndCheckAccess(String boardId, String requesterOid) {
+//        Board board = boardRepository.findById(boardId)
+//                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+//
+//        if (board.getVisibility() != Board.Visibility.PUBLIC &&
+//                !board.getUser().getOid().equals(requesterOid) &&
+//                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, requesterOid)) { //check is a collaborator or not
+//            throw new UnauthorizedAccessException("Access to this board is restricted", null);
+//        }
+//
+//        return board;
+//    }
+
+    static void getBoardAndCheckAccess(String boardId, String userId, BoardRepository boardRepository, BoardCollaboratorsRepository boardCollaboratorsRepository) {
         Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         if (board.getVisibility() != Board.Visibility.PUBLIC &&
-                !board.getUser().getOid().equals(requesterOid) &&
-                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, requesterOid)) { //check is a collaborator or not
+                !board.getUser().getOid().equals(userId) && //check ownership
+                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
             throw new UnauthorizedAccessException("Access to this board is restricted", null);
         }
-
-        return board;
     }
 
     private CollaboratorResponse mapToCollaboratorResponse(BoardCollaborators collaborator) {
@@ -270,4 +269,3 @@ public List<CollaboratorResponse> getBoardCollaborators(String boardId, String r
         return errorResponse;
     }
 }
-
