@@ -8,6 +8,8 @@ import com.pl03.kanban.exceptions.*;
 import com.pl03.kanban.kanban_entities.*;
 import com.pl03.kanban.services.BoardService;
 import com.pl03.kanban.services.StatusService;
+import com.pl03.kanban.user_entities.User;
+import com.pl03.kanban.user_entities.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,6 +24,7 @@ public class BoardServiceImpl implements BoardService {
 
     private final BoardRepository boardRepository;
     private final UsersRepository usersRepository;
+    private final UserRepository userRepository;
     private final BoardCollaboratorsRepository boardCollaboratorsRepository;
     private final ModelMapper modelMapper;
     private final StatusService statusService;
@@ -29,9 +32,10 @@ public class BoardServiceImpl implements BoardService {
     private static final int MAX_BOARD_NAME_LENGTH = 120;
 
     @Autowired
-    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, StatusService statusService) {
+    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, UserRepository userRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, StatusService statusService) {
         this.boardRepository = boardRepository;
         this.usersRepository = usersRepository;
+        this.userRepository = userRepository;
         this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.modelMapper = modelMapper;
         this.statusService = statusService;
@@ -78,23 +82,35 @@ public class BoardServiceImpl implements BoardService {
 
     @Override
     public BoardResponse getBoardById(String id, String requesterOid) {
-        getBoardAndCheckAccess(id, requesterOid, boardRepository, boardCollaboratorsRepository);
-
-        // Once validation passes, fetch the board and return the response
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + id));
 
-        return createBoardResponse(board, board.getUser().getName());
+        // Check access conditions for the board
+        boolean isPublic = board.getVisibility() == Board.Visibility.PUBLIC;
+        boolean isOwner = requesterOid != null && board.getUser().getOid().equals(requesterOid);
+        boolean isCollaborator = requesterOid != null && boardCollaboratorsRepository.existsByBoardIdAndUserOid(board.getId(), requesterOid);
+
+        // If the board is public, the requester is the owner, or the requester is a collaborator, return the board
+        if (isPublic || isOwner || isCollaborator) {
+            return createBoardResponse(board, board.getUser().getName());
+        }
+
+        // If access is denied, throw UnauthorizedAccessException
+        throw new UnauthorizedAccessException("Access to this private board is restricted", null);
     }
 
     @Override
     public List<BoardResponse> getAllBoards(String requesterOid) {
-        List<Board> boards = boardRepository.findAll();
-        return boards.stream()
-                .filter(board -> board.getVisibility() == Board.Visibility.PUBLIC || //filter for public board and requesters board
-                        (board.getUser().getOid().equals(requesterOid)))
-                .map(board -> createBoardResponse(board, board.getUser().getName()))
-                .collect(Collectors.toList());
+        return boardRepository.findAll().stream()
+                .filter(board ->
+                        board.getVisibility() == Board.Visibility.PUBLIC || // Include public boards
+                                (requesterOid != null && (
+                                        board.getUser().getOid().equals(requesterOid) || // Include boards owned by the requester
+                                                boardCollaboratorsRepository.existsByBoardIdAndUserOid(board.getId(), requesterOid)
+                                ))              // Include boards where the requester is a collaborator
+                )
+                .map(board -> createBoardResponse(board, board.getUser().getName())) // Map to response
+                .collect(Collectors.toList()); // Collect to list
     }
 
     @Override
@@ -178,17 +194,40 @@ public class BoardServiceImpl implements BoardService {
             throw new UnauthorizedAccessException("Only the board owner can add collaborators", null);
         }
 
-        Users user = usersRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ItemNotFoundException("User not found with email: " + request.getEmail()));
+        // Fetch user from shared database
+        User authenticatedUser = userRepository.findByEmail(request.getEmail())
+                .orElse(null);
 
-        if (user.getOid().equals(ownerOid)) {
+        Users users;
+        if (authenticatedUser != null) {
+            // Check if the user already exists in the kanban database
+            users = usersRepository.findByEmail(authenticatedUser.getEmail())
+                    .orElse(null);
+
+            // If user is not in kanban DB, create and save a new entry
+            if (users == null) {
+                users = new Users();
+                users.setOid(authenticatedUser.getOid());
+                users.setUsername(authenticatedUser.getUsername());
+                users.setName(authenticatedUser.getName());
+                users.setEmail(authenticatedUser.getEmail());
+                usersRepository.save(users);
+            }
+        } else {
+            throw new ItemNotFoundException("User not found with email: " + request.getEmail());
+        }
+
+        // Prevent adding the board owner as a collaborator
+        if (users.getOid().equals(ownerOid)) {
             throw new ConflictException("Cannot add board owner as a collaborator");
         }
 
-        if (boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, user.getOid())) {
+        // Check if the user is already a collaborator
+        if (boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, users.getOid())) {
             throw new ConflictException("User is already a collaborator");
         }
 
+        // Convert the access right string to an enum
         BoardCollaborators.AccessLevel accessLevel;
         try {
             accessLevel = BoardCollaborators.AccessLevel.valueOf(request.getAccessRight().toUpperCase());
@@ -196,13 +235,14 @@ public class BoardServiceImpl implements BoardService {
             throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
         }
 
+        // Create the collaborator object and save it
         BoardCollaborators collaborator = new BoardCollaborators();
-        collaborator.setId(new BoardCollaboratorsId(board.getId(), user.getOid()));
+        collaborator.setId(new BoardCollaboratorsId(board.getId(), users.getOid()));
         collaborator.setBoard(board);
-        collaborator.setUser(user);
+        collaborator.setUser(users);
         collaborator.setAccessLevel(accessLevel);
-        collaborator.setName(user.getName());
-        collaborator.setEmail(user.getEmail());
+        collaborator.setName(users.getName());
+        collaborator.setEmail(users.getEmail());
 
         BoardCollaborators savedCollaborator = boardCollaboratorsRepository.save(collaborator);
         return mapToCollaboratorResponse(savedCollaborator);
