@@ -2,6 +2,7 @@ package com.pl03.kanban.controllers;
 
 import com.pl03.kanban.dtos.CollaboratorRequest;
 import com.pl03.kanban.dtos.CollaboratorResponse;
+import com.pl03.kanban.exceptions.InvalidBoardFieldException;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
@@ -134,6 +135,28 @@ public class BoardController {
         String ownerOid = getUserIdFromToken(authHeader.substring(7));
         CollaboratorResponse response = boardService.addBoardCollaborator(id, request, ownerOid);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PatchMapping("/{id}/collabs/{collabOid}")
+    public ResponseEntity<CollaboratorResponse> updateCollaboratorAccessRight(
+            @PathVariable String id,
+            @PathVariable String collabOid,
+            @RequestBody Map<String, String> request,
+            @RequestHeader("Authorization") String authHeader) {
+        String requesterOid = getUserIdFromToken(authHeader.substring(7));
+        String accessRight = request.get("access_right");
+        CollaboratorResponse response = boardService.updateCollaboratorAccessRight(id, collabOid, accessRight, requesterOid);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}/collabs/{collabOid}")
+    public ResponseEntity<Void> removeCollaborator(
+            @PathVariable String id,
+            @PathVariable String collabOid,
+            @RequestHeader("Authorization") String authHeader) {
+        String requesterOid = getUserIdFromToken(authHeader.substring(7));
+        boardService.removeCollaborator(id, collabOid, requesterOid);
+        return ResponseEntity.ok().build();
     }
 
     private String getRequesterOid(String authHeader) {

@@ -5,5 +5,5 @@ import lombok.Data;
 @Data
 public class CollaboratorRequest {
     private String email;
-    private String accessRight;
+    private String access_right;
 }

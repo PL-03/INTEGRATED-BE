@@ -10,11 +10,14 @@ import com.pl03.kanban.kanban_entities.*;
 import com.pl03.kanban.utils.ListMapper;
 import com.pl03.kanban.exceptions.InvalidTaskFieldException;
 import com.pl03.kanban.services.TaskV3Service;
+
+import jakarta.validation.constraints.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -51,7 +54,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
     @Override
     public AddEditTaskDto createTask(String boardId, AddEditTaskDto addEditTaskDto, String userId) {
-        Board board = validateBoardAccessAndOwnership(boardId, userId);
+        Board board = BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         // Check if DTO is null or empty
         if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
@@ -127,7 +130,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
     @Override
     public AddEditTaskDto deleteTaskById(String boardId, int taskId, String userId) {
-        validateBoardAccessAndOwnership(boardId, userId);
+        BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
@@ -137,7 +140,7 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
     @Override
     public AddEditTaskDto updateTask(String boardId, int taskId, AddEditTaskDto addEditTaskDto, String userId) {
-        validateBoardAccessAndOwnership(boardId, userId);
+        BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
             throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
@@ -177,17 +180,6 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
         // Return the mapped DTO
         return modelMapper.map(updatedTask, AddEditTaskDto.class);
-    }
-
-    private Board validateBoardAccessAndOwnership(String boardId, String userId) {
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        if (!board.getUser().getOid().equals(userId)) {
-            throw new UnauthorizedAccessException("Only the board owner can perform this operation", null);
-        }
-
-        return board;
     }
 
     private boolean isEmptyTaskDto(AddEditTaskDto dto) {

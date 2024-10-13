@@ -1,6 +1,9 @@
 package com.pl03.kanban.kanban_entities;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,7 +19,6 @@ public interface BoardCollaboratorsRepository extends JpaRepository<BoardCollabo
 
     boolean existsByBoardIdAndUserOid(String boardId, String userOid);
 
-//    boolean existsByBoardIdAndUserOid(String boardId, Long userId);
 }
 
 

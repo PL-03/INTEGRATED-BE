@@ -10,6 +10,7 @@ import com.pl03.kanban.services.BoardService;
 import com.pl03.kanban.services.StatusService;
 import com.pl03.kanban.user_entities.User;
 import com.pl03.kanban.user_entities.UserRepository;
+import jakarta.validation.constraints.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -228,9 +230,9 @@ public class BoardServiceImpl implements BoardService {
         }
 
         // Convert the access right string to an enum
-        BoardCollaborators.AccessLevel accessLevel;
+        BoardCollaborators.AccessRight accessRight;
         try {
-            accessLevel = BoardCollaborators.AccessLevel.valueOf(request.getAccessRight().toUpperCase());
+            accessRight = BoardCollaborators.AccessRight.valueOf(request.getAccess_right().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
         }
@@ -240,7 +242,7 @@ public class BoardServiceImpl implements BoardService {
         collaborator.setId(new BoardCollaboratorsId(board.getId(), users.getOid()));
         collaborator.setBoard(board);
         collaborator.setUser(users);
-        collaborator.setAccessLevel(accessLevel);
+        collaborator.setAccess_right(accessRight);
         collaborator.setName(users.getName());
         collaborator.setEmail(users.getEmail());
 
@@ -248,6 +250,44 @@ public class BoardServiceImpl implements BoardService {
         return mapToCollaboratorResponse(savedCollaborator);
     }
 
+    @Override
+    public CollaboratorResponse updateCollaboratorAccessRight(String boardId, String collabOid, String accessRight, String requesterOid) {
+        getBoardAndCheckOwnership(boardId, requesterOid);
+
+        BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
+                .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
+
+        if (accessRight == null || accessRight.isEmpty()) {
+            throw new InvalidBoardFieldException("access_right is required", null);
+        }
+
+        BoardCollaborators.AccessRight newAccessRight;
+        try {
+            newAccessRight = BoardCollaborators.AccessRight.valueOf(accessRight.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
+        }
+
+        collaborator.setAccess_right(newAccessRight);
+        BoardCollaborators updatedCollaborator = boardCollaboratorsRepository.save(collaborator);
+        return mapToCollaboratorResponse(updatedCollaborator);
+    }
+
+    @Override
+    public void removeCollaborator(String boardId, String collabOid, String requesterOid) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        // Check if the requester is the board owner or the collaborator being removed
+        if (!board.getUser().getOid().equals(requesterOid) && !collabOid.equals(requesterOid)) {
+            throw new UnauthorizedAccessException("You don't have permission to remove this collaborator", null);
+        }
+
+        BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
+                .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
+
+        boardCollaboratorsRepository.delete(collaborator);
+    }
 //    private Board getBoardAndCheckAccess(String boardId, String requesterOid) {
 //        Board board = boardRepository.findById(boardId)
 //                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
@@ -260,6 +300,15 @@ public class BoardServiceImpl implements BoardService {
 //
 //        return board;
 //    }
+    private void getBoardAndCheckOwnership(String boardId, String requesterOid) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board not found"));
+
+        if (!board.getUser().getOid().equals(requesterOid)) {
+            throw new UnauthorizedAccessException("Only the board owner can perform this action", null);
+        }
+
+    }
 
     static void getBoardAndCheckAccess(String boardId, String userId, BoardRepository boardRepository, BoardCollaboratorsRepository boardCollaboratorsRepository) {
         Board board = boardRepository.findById(boardId)
@@ -272,12 +321,28 @@ public class BoardServiceImpl implements BoardService {
         }
     }
 
+    @NotNull
+    public static Board validateBoardAccessAndOwnerShip(String boardId, String userId, BoardRepository boardRepository, BoardCollaboratorsRepository boardCollaboratorsRepository) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        if (!board.getUser().getOid().equals(userId)) {
+            // Check if the user is a collaborator with WRITE access
+            Optional<BoardCollaborators> collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, userId);
+            if (collaborator.isEmpty() || collaborator.get().getAccess_right() != BoardCollaborators.AccessRight.WRITE) {
+                throw new UnauthorizedAccessException("Only the board owner or collaborators with WRITE access can perform this operation", null);
+            }
+        }
+
+        return board;
+    }
+
     private CollaboratorResponse mapToCollaboratorResponse(BoardCollaborators collaborator) {
         return CollaboratorResponse.builder()
                 .oid(collaborator.getUser().getOid())
                 .name(collaborator.getName())
                 .email(collaborator.getEmail())
-                .accessRight(collaborator.getAccessLevel().name())
+                .access_right(collaborator.getAccess_right().name())
                 .addedOn(collaborator.getAddedOn())
                 .build();
     }

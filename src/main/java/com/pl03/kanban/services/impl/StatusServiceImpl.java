@@ -65,7 +65,7 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto createStatus(String boardId, StatusDto statusDto, String userId) {
-        Board board = validateBoardAccessAndOwnership(boardId, userId);
+        Board board = BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         if (statusDto == null || isEmptyStatusDto(statusDto)) {
             throw new InvalidStatusFieldException("Status's input must have at least status's name to create status", null);
@@ -85,7 +85,7 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto updateStatus(String boardId, int id, StatusDto updatedStatusDto, String userId) {
-        validateBoardAccessAndOwnership(boardId, userId);
+        BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         if (updatedStatusDto == null || isEmptyStatusDto(updatedStatusDto)) {
             throw new InvalidStatusFieldException("Status's input must have at least status's name to update status", null);
@@ -117,7 +117,7 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public StatusDto deleteStatus(String boardId, int id, String userId) {
-        validateBoardAccessAndOwnership(boardId, userId);
+        BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
@@ -137,14 +137,7 @@ public class StatusServiceImpl implements StatusService {
 
     @Override
     public void deleteStatusAndTransferTasks(String boardId, int id, int newStatusId, String userId) {
-        //find board first
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        //check ownership
-        if (!board.getUser().getOid().equals(userId) && board.getVisibility() != Board.Visibility.PUBLIC) {
-            throw new UnauthorizedAccessException("Only the board owner can access a private board", null);
-        }
+        BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         StatusV3 currentStatusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
@@ -164,17 +157,6 @@ public class StatusServiceImpl implements StatusService {
         taskV3Repository.saveAll(tasksWithCurrentStatus);
 
         statusV3Repository.delete(currentStatusV3);
-    }
-
-    private Board validateBoardAccessAndOwnership(String boardId, String userId) {
-        Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
-
-        if (!board.getUser().getOid().equals(userId)) {
-            throw new UnauthorizedAccessException("Only the board owner can perform this operation", null);
-        }
-
-        return board;
     }
 
     private boolean isEmptyStatusDto(StatusDto dto) {
