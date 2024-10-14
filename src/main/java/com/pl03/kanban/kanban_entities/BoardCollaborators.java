@@ -32,7 +32,7 @@ public class BoardCollaborators {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "accessLevel", nullable = false)
-    private AccessRight access_right; // Access level for the collaborator
+    private AccessRight accessRight; // Access level for the collaborator
 
     @Column(name = "addedOn", nullable = false, updatable = false)
     @CreationTimestamp

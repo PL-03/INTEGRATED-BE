@@ -209,7 +209,7 @@ public class BoardServiceImpl implements BoardService {
             throw new InvalidBoardFieldException("Collaborator's email must be provided", null);
         }
 
-        if (request.getAccess_right() == null || request.getAccess_right().isEmpty()) {
+        if (request.getAccessRight() == null || request.getAccessRight().isEmpty()) {
             throw new InvalidBoardFieldException("Access right must be provided", null);
         }
 
@@ -242,7 +242,7 @@ public class BoardServiceImpl implements BoardService {
         // Convert the access right string to an enum
         BoardCollaborators.AccessRight accessRight;
         try {
-            accessRight = BoardCollaborators.AccessRight.valueOf(request.getAccess_right().toUpperCase());
+            accessRight = BoardCollaborators.AccessRight.valueOf(request.getAccessRight().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
         }
@@ -252,7 +252,7 @@ public class BoardServiceImpl implements BoardService {
         collaborator.setId(new BoardCollaboratorsId(board.getId(), users.getOid()));
         collaborator.setBoard(board);
         collaborator.setUser(users);
-        collaborator.setAccess_right(accessRight);
+        collaborator.setAccessRight(accessRight);
         collaborator.setName(users.getName());
         collaborator.setEmail(users.getEmail());
 
@@ -278,7 +278,7 @@ public class BoardServiceImpl implements BoardService {
             throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
         }
 
-        collaborator.setAccess_right(newAccessRight);
+        collaborator.setAccessRight(newAccessRight);
         BoardCollaborators updatedCollaborator = boardCollaboratorsRepository.save(collaborator);
         return mapToCollaboratorResponse(updatedCollaborator);
     }
@@ -339,7 +339,7 @@ public class BoardServiceImpl implements BoardService {
         if (!board.getUser().getOid().equals(userId)) {
             // Check if the user is a collaborator with WRITE access
             Optional<BoardCollaborators> collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, userId);
-            if (collaborator.isEmpty() || collaborator.get().getAccess_right() != BoardCollaborators.AccessRight.WRITE) {
+            if (collaborator.isEmpty() || collaborator.get().getAccessRight() != BoardCollaborators.AccessRight.WRITE) {
                 throw new UnauthorizedAccessException("Only the board owner or collaborators with WRITE access can perform this operation", null);
             }
         }
@@ -352,7 +352,7 @@ public class BoardServiceImpl implements BoardService {
                 .oid(collaborator.getUser().getOid())
                 .name(collaborator.getName())
                 .email(collaborator.getEmail())
-                .access_right(collaborator.getAccess_right().name())
+                .accessRight(collaborator.getAccessRight().name())
                 .addedOn(collaborator.getAddedOn())
                 .build();
     }
@@ -370,7 +370,7 @@ public class BoardServiceImpl implements BoardService {
                             collab.getUser().getOid(),
                             collab.getName(),
                             collab.getEmail(),
-                            collab.getAccess_right()
+                            collab.getAccessRight()
                     ))
                     .collect(Collectors.toList());
         } else {
