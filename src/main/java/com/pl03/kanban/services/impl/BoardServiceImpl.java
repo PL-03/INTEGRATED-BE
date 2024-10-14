@@ -15,6 +15,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
+    @Transactional(transactionManager = "kanbanTransactionManager")
     public BoardResponse createBoard(BoardRequest request, String ownerOid, String ownerName) {
         // Validate the board name
         ErrorResponse errorResponse = validateBoardFields(request);
@@ -83,6 +85,7 @@ public class BoardServiceImpl implements BoardService {
 
 
     @Override
+    @Transactional(readOnly = true, transactionManager = "kanbanTransactionManager")
     public BoardResponse getBoardById(String id, String requesterOid) {
         Board board = boardRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + id));
@@ -102,6 +105,7 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
+    @Transactional(readOnly = true, transactionManager = "kanbanTransactionManager")
     public List<BoardResponse> getAllBoards(String requesterOid) {
         return boardRepository.findAll().stream()
                 .filter(board ->
@@ -116,6 +120,7 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
+    @Transactional(transactionManager = "kanbanTransactionManager")
     public BoardResponse updateBoardVisibility(String boardId, Map<String, String> updateRequest, String ownerOid) {
         // Fetch the board by id
         Board board = boardRepository.findById(boardId)
@@ -347,13 +352,24 @@ public class BoardServiceImpl implements BoardService {
                 .build();
     }
     private BoardResponse createBoardResponse(Board board, String ownerName) {
-        BoardResponse response = new BoardResponse(); // using manual mapping because of avoiding potential issue
-        response.setId(board.getId());                  // with enum value
+        BoardResponse response = new BoardResponse();
+        response.setId(board.getId());
         response.setName(board.getName());
         response.setVisibility(BoardResponse.Visibility.valueOf(board.getVisibility().name()));
         response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));
+
+        List<BoardResponse.CollaboratorResponse> collaborators = board.getCollaborators().stream()
+                .map(collab -> new BoardResponse.CollaboratorResponse(
+                        collab.getUser().getOid(),
+                        collab.getName(),
+                        collab.getEmail(),
+                        collab.getAccess_right()
+                ))
+                .collect(Collectors.toList());
+        response.setCollaborators(collaborators);
+
         return response;
-}
+    }
 
     // Validation method for the board name
     private ErrorResponse validateBoardFields(BoardRequest boardRequest) {
