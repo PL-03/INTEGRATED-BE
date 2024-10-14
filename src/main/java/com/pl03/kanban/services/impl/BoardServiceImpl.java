@@ -213,6 +213,14 @@ public class BoardServiceImpl implements BoardService {
             throw new InvalidBoardFieldException("Access right must be provided", null);
         }
 
+        // Convert the access right string to an enum
+        BoardCollaborators.AccessRight accessRight;
+        try {
+            accessRight = BoardCollaborators.AccessRight.valueOf(request.getAccessRight().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
+        }
+
         // Fetch user from shared database
         User authenticatedUser = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ItemNotFoundException("User not found with email: " + request.getEmail()));
@@ -239,14 +247,6 @@ public class BoardServiceImpl implements BoardService {
             throw new ConflictException("User is already a collaborator");
         }
 
-        // Convert the access right string to an enum
-        BoardCollaborators.AccessRight accessRight;
-        try {
-            accessRight = BoardCollaborators.AccessRight.valueOf(request.getAccessRight().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
-        }
-
         // Create the collaborator object and save it
         BoardCollaborators collaborator = new BoardCollaborators();
         collaborator.setId(new BoardCollaboratorsId(board.getId(), users.getOid()));
@@ -268,7 +268,7 @@ public class BoardServiceImpl implements BoardService {
                 .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
 
         if (accessRight == null || accessRight.isEmpty()) {
-            throw new InvalidBoardFieldException("access_right is required", null);
+            throw new InvalidBoardFieldException("accessRight is required", null);
         }
 
         BoardCollaborators.AccessRight newAccessRight;

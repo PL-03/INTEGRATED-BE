@@ -142,13 +142,13 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     public AddEditTaskDto updateTask(String boardId, int taskId, AddEditTaskDto addEditTaskDto, String userId) {
         BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
-        if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
-            throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
-        }
-
         // Check if the task exists in the board
         TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
+
+        if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
+            throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
+        }
 
         // Validate task fields
         ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);

@@ -144,7 +144,7 @@ public class BoardController {
             @RequestBody Map<String, String> request,
             @RequestHeader("Authorization") String authHeader) {
         String requesterOid = getUserIdFromToken(authHeader.substring(7));
-        String accessRight = request.get("access_right");
+        String accessRight = request.get("accessRight");
         CollaboratorResponse response = boardService.updateCollaboratorAccessRight(id, collabOid, accessRight, requesterOid);
         return ResponseEntity.ok(response);
     }

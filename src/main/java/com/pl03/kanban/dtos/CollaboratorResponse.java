@@ -13,10 +13,10 @@ public class CollaboratorResponse {
     private String name;
     private String email;
 
-    @JsonProperty("access_right")
+//    @JsonProperty("access_right")
     private String accessRight;
 
-    @JsonProperty("added_on")
+//    @JsonProperty("added_on")
     private Timestamp addedOn;
 }
 

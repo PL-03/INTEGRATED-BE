@@ -87,12 +87,13 @@ public class StatusServiceImpl implements StatusService {
     public StatusDto updateStatus(String boardId, int id, StatusDto updatedStatusDto, String userId) {
         BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
+        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
+
         if (updatedStatusDto == null || isEmptyStatusDto(updatedStatusDto)) {
             throw new InvalidStatusFieldException("Status's input must have at least status's name to update status", null);
         }
 
-        StatusV3 statusV3 = statusV3Repository.findByIdAndBoardId(id, boardId)
-                .orElseThrow(() -> new ItemNotFoundException("Status with id " + id + " does not exist in board id: " + boardId));
 
         if (isStatusNameDefault(statusV3.getName())) {
             throw new InvalidStatusFieldException(statusV3.getName() + " cannot be modified");
