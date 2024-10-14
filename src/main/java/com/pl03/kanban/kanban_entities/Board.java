@@ -10,6 +10,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -53,7 +54,8 @@ public class Board {
     private Timestamp updatedOn;
 
     @OneToMany(mappedBy = "board", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<BoardCollaborators> collaborators;
+    private List<BoardCollaborators> collaborators = new ArrayList<>();
+    // create an empty list to prevent get collabs method from returning null
 
     @PrePersist
     public void prePersist() {

@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -358,14 +359,19 @@ public class BoardServiceImpl implements BoardService {
         response.setVisibility(BoardResponse.Visibility.valueOf(board.getVisibility().name()));
         response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));
 
-        List<BoardResponse.CollaboratorResponse> collaborators = board.getCollaborators().stream()
-                .map(collab -> new BoardResponse.CollaboratorResponse(
-                        collab.getUser().getOid(),
-                        collab.getName(),
-                        collab.getEmail(),
-                        collab.getAccess_right()
-                ))
-                .collect(Collectors.toList());
+        List<BoardResponse.CollaboratorResponse> collaborators;
+        if (board.getCollaborators() != null) {
+            collaborators = board.getCollaborators().stream()
+                    .map(collab -> new BoardResponse.CollaboratorResponse(
+                            collab.getUser().getOid(),
+                            collab.getName(),
+                            collab.getEmail(),
+                            collab.getAccess_right()
+                    ))
+                    .collect(Collectors.toList());
+        } else {
+            collaborators = new ArrayList<>(); // Empty list if there are no collaborators
+        }
         response.setCollaborators(collaborators);
 
         return response;
