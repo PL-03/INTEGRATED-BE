@@ -194,7 +194,9 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
+//    @Transactional //using both db
     public CollaboratorResponse addBoardCollaborator(String boardId, CollaboratorRequest request, String ownerOid) {
+        // Fetch the board and check authorization first
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
@@ -202,27 +204,29 @@ public class BoardServiceImpl implements BoardService {
             throw new UnauthorizedAccessException("Only the board owner can add collaborators", null);
         }
 
+        // Validation of the request after authorization
+        if (request == null || request.getEmail() == null || request.getEmail().isEmpty()) {
+            throw new InvalidBoardFieldException("Collaborator's email must be provided", null);
+        }
+
+        if (request.getAccess_right() == null || request.getAccess_right().isEmpty()) {
+            throw new InvalidBoardFieldException("Access right must be provided", null);
+        }
+
         // Fetch user from shared database
         User authenticatedUser = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ItemNotFoundException("User not found with email: " + request.getEmail()));
+
+        Users users = usersRepository.findByEmail(authenticatedUser.getEmail())
                 .orElse(null);
 
-        Users users;
-        if (authenticatedUser != null) {
-            // Check if the user already exists in the kanban database
-            users = usersRepository.findByEmail(authenticatedUser.getEmail())
-                    .orElse(null);
-
-            // If user is not in kanban DB, create and save a new entry
-            if (users == null) {
-                users = new Users();
-                users.setOid(authenticatedUser.getOid());
-                users.setUsername(authenticatedUser.getUsername());
-                users.setName(authenticatedUser.getName());
-                users.setEmail(authenticatedUser.getEmail());
-                usersRepository.save(users);
-            }
-        } else {
-            throw new ItemNotFoundException("User not found with email: " + request.getEmail());
+        if (users == null) {
+            users = new Users();
+            users.setOid(authenticatedUser.getOid());
+            users.setUsername(authenticatedUser.getUsername());
+            users.setName(authenticatedUser.getName());
+            users.setEmail(authenticatedUser.getEmail());
+            usersRepository.save(users);
         }
 
         // Prevent adding the board owner as a collaborator

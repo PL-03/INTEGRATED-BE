@@ -130,7 +130,7 @@ public class BoardController {
     @PostMapping("/{id}/collabs")
     public ResponseEntity<CollaboratorResponse> addBoardCollaborator(
             @PathVariable String id,
-            @RequestBody CollaboratorRequest request,
+            @RequestBody(required = false) CollaboratorRequest request,
             @RequestHeader("Authorization") String authHeader) {
         String ownerOid = getUserIdFromToken(authHeader.substring(7));
         CollaboratorResponse response = boardService.addBoardCollaborator(id, request, ownerOid);
