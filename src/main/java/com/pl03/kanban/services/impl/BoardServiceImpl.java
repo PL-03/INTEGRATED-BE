@@ -288,9 +288,22 @@ public class BoardServiceImpl implements BoardService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
 
-        // Check if the requester is the board owner or the collaborator being removed
-        if (!board.getUser().getOid().equals(requesterOid) && !collabOid.equals(requesterOid)) {
-            throw new UnauthorizedAccessException("You don't have permission to remove this collaborator", null);
+        boolean isOwner = board.getUser().getOid().equals(requesterOid);
+
+        if (!isOwner) {
+            // if not owner, check if they are an existing collaborator trying to remove themselves
+            if (collabOid.equals(requesterOid)) {
+                // check if they are a collaborator before allowing self-removal
+                boolean isExistingCollaborator = boardCollaboratorsRepository
+                        .findByBoardIdAndUserOid(boardId, requesterOid)
+                        .isPresent();
+
+                if (!isExistingCollaborator) {
+                    throw new UnauthorizedAccessException("You are not a collaborator on this board", null);
+                }
+            } else {
+                throw new UnauthorizedAccessException("You don't have permission to remove this collaborator", null);
+            }
         }
 
         BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
