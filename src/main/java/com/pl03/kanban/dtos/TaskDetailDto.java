@@ -4,6 +4,8 @@ import lombok.Data;
 import lombok.experimental.FieldNameConstants;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @FieldNameConstants
@@ -16,4 +18,5 @@ public class TaskDetailDto {
     private String boardId;
     private Timestamp createdOn;
     private Timestamp updatedOn;
+    private FileStorageDto[] attachments;
 }

@@ -1,5 +1,7 @@
-package com.pl03.kanban.kanban_entities;
+package com.pl03.kanban.kanban_entities.Repositories;
 
+import com.pl03.kanban.kanban_entities.BoardCollaborators;
+import com.pl03.kanban.kanban_entities.BoardCollaboratorsId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

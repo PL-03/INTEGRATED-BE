@@ -1,22 +1,18 @@
 package com.pl03.kanban.controllers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pl03.kanban.dtos.AddEditTaskDto;
+import com.pl03.kanban.dtos.FileUploadResponse;
 import com.pl03.kanban.dtos.GetAllTaskDto;
 import com.pl03.kanban.dtos.TaskDetailDto;
-import com.pl03.kanban.exceptions.InvalidTaskFieldException;
-import com.pl03.kanban.exceptions.ItemNotFoundException;
-import com.pl03.kanban.exceptions.UnauthorizedAccessException;
-import com.pl03.kanban.kanban_entities.Board;
-import com.pl03.kanban.kanban_entities.BoardRepository;
-import com.pl03.kanban.services.BoardService;
+import com.pl03.kanban.kanban_entities.Repositories.BoardRepository;
+import com.pl03.kanban.services.FileStorageService;
 import com.pl03.kanban.services.TaskV3Service;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -38,11 +34,14 @@ public class TaskController {
 
     private final BoardRepository boardRepository;
 
+    private final FileStorageService fileStorageService;
+
     @Autowired
-    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository) {
+    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository, FileStorageService fileStorageService) {
         this.taskV3Service = taskV3Service;
         this.jwtTokenUtils = jwtTokenUtils;
         this.boardRepository = boardRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @GetMapping
@@ -92,11 +91,24 @@ public class TaskController {
     }
 
     @PutMapping("/{taskId}")
-    public ResponseEntity<Object> updateTask(@PathVariable String boardId, @PathVariable int taskId,
-                                             @RequestBody(required = false) AddEditTaskDto addEditTaskDto,
-                                             @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Object> updateTask(
+            @PathVariable String boardId,
+            @PathVariable int taskId,
+            @RequestPart(value = "task", required = false) AddEditTaskDto addEditTaskDto,
+            @RequestPart(value = "filesToDelete", required = false) List<Long> filesToDelete,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @RequestHeader("Authorization") String authHeader
+    ) {
         String token = authHeader.substring(7);
         String userId = getUserIdFromToken(token);
+
+        // Set files to delete and new files in DTO
+        if (addEditTaskDto == null) {
+            addEditTaskDto = new AddEditTaskDto();
+        }
+        addEditTaskDto.setFilesToDelete(filesToDelete);
+        addEditTaskDto.setNewFiles(files);
+
         AddEditTaskDto response = taskV3Service.updateTask(boardId, taskId, addEditTaskDto, userId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

@@ -1,7 +1,11 @@
 package com.pl03.kanban.dtos;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.experimental.FieldNameConstants;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @Data
 @FieldNameConstants
@@ -12,16 +16,10 @@ public class AddEditTaskDto {
     private String assignees;
     private String status;
     private String boardId;
+    private FileStorageDto[] attachments;
 
-    public void setTitle(String title) {
-        this.title = title == null || title.trim().isEmpty() ? null : title.trim();
-    }
-
-    public void setDescription(String description) {
-        this.description = description == null || description.trim().isEmpty() ? null : description.trim();
-    }
-
-    public void setAssignees(String assignees) {
-        this.assignees = assignees == null || assignees.trim().isEmpty() ? null : assignees.trim();
-    }
+    @JsonIgnore
+    private List<Long> filesToDelete;
+    @JsonIgnore
+    private List<MultipartFile> newFiles;
 }
