@@ -2,7 +2,6 @@ package com.pl03.kanban.controllers;
 
 import com.pl03.kanban.dtos.CollaboratorRequest;
 import com.pl03.kanban.dtos.CollaboratorResponse;
-import com.pl03.kanban.exceptions.InvalidBoardFieldException;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
