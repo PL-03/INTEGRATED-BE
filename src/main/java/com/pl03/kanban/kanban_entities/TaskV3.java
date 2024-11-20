@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
@@ -42,4 +44,7 @@ public class TaskV3 {
     @ManyToOne
     @JoinColumn(name = "boardId", nullable = false)
     private Board board;
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FileStorage> files = new ArrayList<>();
 }

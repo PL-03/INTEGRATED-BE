@@ -1,7 +1,11 @@
-package com.pl03.kanban.kanban_entities;
+package com.pl03.kanban.kanban_entities.repositories;
 
+import com.pl03.kanban.kanban_entities.StatusV3;
+import com.pl03.kanban.kanban_entities.TaskV3;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,4 +24,7 @@ public interface TaskV3Repository extends JpaRepository<TaskV3, Integer> {
 
     List<TaskV3> findByStatusV3InAndBoardId(List<StatusV3> statusV3s, String boardId, Sort sort); //fetch all tasks in a board (sorted, status filtered)
     List<TaskV3> findByStatusV3InAndBoardId(List<StatusV3> statusV3s, String boardId); //fetch all tasks in a board (status filtered no sort)
+
+    @Query("SELECT t FROM TaskV3 t LEFT JOIN FETCH t.files LEFT JOIN FETCH t.statusV3 WHERE t.id = :taskId AND t.board.id = :boardId")
+    Optional<TaskV3> findByIdAndBoardIdWithFiles(@Param("taskId") int taskId, @Param("boardId") String boardId);
 }

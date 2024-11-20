@@ -2,21 +2,19 @@ package com.pl03.kanban.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pl03.kanban.dtos.AddEditTaskDto;
-import com.pl03.kanban.dtos.GetAllTaskDto;
-import com.pl03.kanban.dtos.TaskDetailDto;
-import com.pl03.kanban.exceptions.InvalidTaskFieldException;
-import com.pl03.kanban.exceptions.ItemNotFoundException;
-import com.pl03.kanban.exceptions.UnauthorizedAccessException;
-import com.pl03.kanban.kanban_entities.Board;
-import com.pl03.kanban.kanban_entities.BoardRepository;
-import com.pl03.kanban.services.BoardService;
+import com.pl03.kanban.dtos.*;
+import com.pl03.kanban.kanban_entities.repositories.BoardRepository;
+import com.pl03.kanban.services.FileStorageService;
 import com.pl03.kanban.services.TaskV3Service;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -38,11 +36,14 @@ public class TaskController {
 
     private final BoardRepository boardRepository;
 
+    private final FileStorageService fileStorageService;
+
     @Autowired
-    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository) {
+    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository, FileStorageService fileStorageService) {
         this.taskV3Service = taskV3Service;
         this.jwtTokenUtils = jwtTokenUtils;
         this.boardRepository = boardRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     @GetMapping
@@ -77,8 +78,11 @@ public class TaskController {
     }
 
     @GetMapping("/{taskId}")
-    public ResponseEntity<TaskDetailDto> getTaskById(@PathVariable String boardId, @PathVariable int taskId,
-                                                     @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public ResponseEntity<TaskDetailDtoWithAttachments> getTaskById(
+            @PathVariable String boardId,
+            @PathVariable int taskId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
         String userId = null; //for public access
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
@@ -87,17 +91,41 @@ public class TaskController {
             }
         }
 
-        TaskDetailDto taskDto = taskV3Service.getTaskById(boardId, taskId, userId);
+        TaskDetailDtoWithAttachments taskDto = taskV3Service.getTaskById(boardId, taskId, userId);
         return ResponseEntity.ok(taskDto);
     }
 
     @PutMapping("/{taskId}")
-    public ResponseEntity<Object> updateTask(@PathVariable String boardId, @PathVariable int taskId,
-                                             @RequestBody(required = false) AddEditTaskDto addEditTaskDto,
-                                             @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Object> updateTask(
+            @PathVariable String boardId,
+            @PathVariable int taskId,
+            @RequestPart(value = "task", required = false) String taskJson,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @RequestHeader("Authorization") String authHeader) {
+
         String token = authHeader.substring(7);
         String userId = getUserIdFromToken(token);
-        AddEditTaskDto response = taskV3Service.updateTask(boardId, taskId, addEditTaskDto, userId);
+
+        // Convert task JSON to DTO
+        AddEditTaskDtoWithAttachments addEditTaskDto;
+        try {
+            if (taskJson != null && !taskJson.isEmpty()) {
+                addEditTaskDto = new ObjectMapper().readValue(taskJson, AddEditTaskDtoWithAttachments.class);
+            } else {
+                addEditTaskDto = new AddEditTaskDtoWithAttachments();
+            }
+
+            // Set the files if provided
+            if (files != null && !files.isEmpty()) {
+                addEditTaskDto.setNewAttachments(files);
+            }
+
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Invalid task data format");
+        }
+
+        AddEditTaskDtoWithAttachments response = taskV3Service.updateTask(boardId, taskId, addEditTaskDto, userId);
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -108,6 +136,32 @@ public class TaskController {
         String userId = getUserIdFromToken(token);
         AddEditTaskDto addEditTaskById = taskV3Service.deleteTaskById(boardId, taskId, userId);
         return ResponseEntity.ok(addEditTaskById);
+    }
+
+    @GetMapping("/{taskId}/attachments/{fileName:.+}")
+    public ResponseEntity<Resource> downloadFile(
+            @PathVariable String boardId,
+            @PathVariable int taskId,
+            @PathVariable String fileName,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        String userId = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwtTokenUtils.validateToken(token)) {
+                userId = getUserIdFromToken(token);
+            }
+        }
+
+        // Verify access to the board/task
+        taskV3Service.getTaskById(boardId, taskId, userId); // This will throw exception if access is denied
+
+        Resource resource = fileStorageService.loadFileAsResource(fileName, taskId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                .body(resource);
     }
 
     private String getUserIdFromToken(String token) {

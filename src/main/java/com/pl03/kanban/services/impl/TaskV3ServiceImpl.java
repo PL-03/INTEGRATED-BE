@@ -1,17 +1,18 @@
 package com.pl03.kanban.services.impl;
 
-import com.pl03.kanban.dtos.AddEditTaskDto;
-import com.pl03.kanban.dtos.TaskDetailDto;
+import com.pl03.kanban.dtos.*;
 import com.pl03.kanban.exceptions.ErrorResponse;
 import com.pl03.kanban.exceptions.ItemNotFoundException;
-import com.pl03.kanban.dtos.GetAllTaskDto;
-import com.pl03.kanban.exceptions.UnauthorizedAccessException;
 import com.pl03.kanban.kanban_entities.*;
+import com.pl03.kanban.kanban_entities.repositories.BoardCollaboratorsRepository;
+import com.pl03.kanban.kanban_entities.repositories.BoardRepository;
+import com.pl03.kanban.kanban_entities.repositories.StatusV3Repository;
+import com.pl03.kanban.kanban_entities.repositories.TaskV3Repository;
+import com.pl03.kanban.services.FileStorageService;
 import com.pl03.kanban.utils.ListMapper;
 import com.pl03.kanban.exceptions.InvalidTaskFieldException;
 import com.pl03.kanban.services.TaskV3Service;
 
-import jakarta.validation.constraints.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -20,6 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.pl03.kanban.services.FileStorageService.MAX_FILES;
 
 @Service
 public class TaskV3ServiceImpl implements TaskV3Service {
@@ -30,15 +34,18 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     private final ListMapper listMapper;
     private final BoardRepository boardRepository;
 
+    private final FileStorageService fileStorageService;
+
     @Autowired
     public TaskV3ServiceImpl(TaskV3Repository taskV3Repository, StatusV3Repository statusV3Repository,
-                             BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, ListMapper listMapper, BoardRepository boardRepository) {
+                             BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, ListMapper listMapper, BoardRepository boardRepository, FileStorageService fileStorageService) {
         this.taskV3Repository = taskV3Repository;
         this.statusV3Repository = statusV3Repository;
         this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.modelMapper = modelMapper;
         this.listMapper = listMapper;
         this.boardRepository = boardRepository;
+        this.fileStorageService = fileStorageService;
 
         // Custom mapping for status name
         modelMapper.typeMap(TaskV3.class, GetAllTaskDto.class).addMappings(mapper ->
@@ -46,6 +53,9 @@ public class TaskV3ServiceImpl implements TaskV3Service {
 
         modelMapper.typeMap(TaskV3.class, AddEditTaskDto.class).addMappings(mapper ->
                 mapper.map(src -> src.getStatusV3().getName(), AddEditTaskDto::setStatus));
+
+        modelMapper.typeMap(TaskV3.class, AddEditTaskDtoWithAttachments.class).addMappings(mapper ->
+                mapper.map(src -> src.getStatusV3().getName(), AddEditTaskDtoWithAttachments::setStatus));
     }
 
     private static final int MAX_TASK_TITLE_LENGTH = 100;
@@ -112,18 +122,22 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     }
 
     @Override
-    public TaskDetailDto getTaskById(String boardId, int taskId, String userId) {
-        //find board
+    public TaskDetailDtoWithAttachments getTaskById(String boardId, int taskId, String userId) {
         BoardServiceImpl.getBoardAndCheckAccess(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
-        TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
+        // Use the new repository method that fetches files eagerly
+        TaskV3 task = taskV3Repository.findByIdAndBoardIdWithFiles(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
 
         // Map the entity to TaskDetailDto
-        TaskDetailDto taskDetailDto = modelMapper.map(task, TaskDetailDto.class);
-
-        // Manually set the status to the status name only
+        TaskDetailDtoWithAttachments taskDetailDto = modelMapper.map(task, TaskDetailDtoWithAttachments.class);
         taskDetailDto.setStatus(task.getStatusV3().getName());
+
+        // Map attachments
+        List<FileAttachmentDto> attachments = task.getFiles().stream()
+                .map(file -> modelMapper.map(file, FileAttachmentDto.class))
+                .collect(Collectors.toList());
+        taskDetailDto.setAttachments(attachments);
 
         return taskDetailDto;
     }
@@ -139,48 +153,66 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     }
 
     @Override
-    public AddEditTaskDto updateTask(String boardId, int taskId, AddEditTaskDto addEditTaskDto, String userId) {
+    @Transactional(transactionManager = "kanbanTransactionManager")
+    public AddEditTaskDtoWithAttachments updateTask(String boardId, int taskId, AddEditTaskDtoWithAttachments addEditTaskDto, String userId) {
         BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
-        // Check if the task exists in the board
-        TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
+        // Use the new repository method that fetches files eagerly
+        TaskV3 task = taskV3Repository.findByIdAndBoardIdWithFiles(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
 
+        // Handle file attachments first
+        List<String> unaddedFiles = new ArrayList<>();
+        if (addEditTaskDto.getNewAttachments() != null && !addEditTaskDto.getNewAttachments().isEmpty()) {
+            unaddedFiles = fileStorageService.validateAndStoreFiles(
+                    addEditTaskDto.getNewAttachments(), task);
+        }
+
+        // Handle file deletions
+        if (addEditTaskDto.getAttachmentsToDelete() != null && !addEditTaskDto.getAttachmentsToDelete().isEmpty()) {
+            fileStorageService.deleteFiles(addEditTaskDto.getAttachmentsToDelete(), task);
+        }
+
+        // Validate and update other task fields
         if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
             throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
         }
 
-        // Validate task fields
         ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);
         if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
             throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
-
-        // Update task fields only if the new values are not null or empty (using the setters in AddEditTaskDto)
+        // Update task fields
         task.setTitle(addEditTaskDto.getTitle() == null ? task.getTitle() : addEditTaskDto.getTitle().trim());
-        // Set description: If it's null, set to null to allow deletion
         task.setDescription(addEditTaskDto.getDescription() != null ? addEditTaskDto.getDescription().trim() : null);
-
-        // Set assignees: If it's null, set to null to allow deletion
         task.setAssignees(addEditTaskDto.getAssignees() != null ? addEditTaskDto.getAssignees().trim() : null);
 
-        // Set the status if provided
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             StatusV3 statusV3 = statusV3Repository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
                     .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist in board id: " + boardId));
             task.setStatusV3(statusV3);
         }
 
-        // Ensure the task remains associated with the same board
-        task.setBoard(task.getBoard());
-
         // Save the updated task
         TaskV3 updatedTask = taskV3Repository.save(task);
 
-        // Return the mapped DTO
-        return modelMapper.map(updatedTask, AddEditTaskDto.class);
+        if (!unaddedFiles.isEmpty()) {
+            throw new IllegalArgumentException("Each task can have at most " + MAX_FILES +
+                    " files. The following files are not added: " + String.join(", ", unaddedFiles));
+        }
+
+        // Map existing attachments to FileAttachmentDto
+        List<FileAttachmentDto> existingAttachments = updatedTask.getFiles().stream()
+                .map(file -> new FileAttachmentDto(file.getId(), file.getName(), file.getType(), file.getAddedOn()))
+                .collect(Collectors.toList());
+
+        // Map to response DTO
+        AddEditTaskDtoWithAttachments response = modelMapper.map(updatedTask, AddEditTaskDtoWithAttachments.class);
+        response.setExistingAttachments(existingAttachments); // Include attachments in the response
+        return response;
     }
+
 
     private boolean isEmptyTaskDto(AddEditTaskDto dto) {
         return (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) &&
