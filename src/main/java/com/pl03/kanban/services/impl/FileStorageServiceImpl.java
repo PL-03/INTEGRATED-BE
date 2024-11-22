@@ -111,7 +111,7 @@ public class FileStorageServiceImpl implements FileStorageService {
                     .orElseThrow(() -> new ItemNotFoundException("File not found with id: " + fileId));
 
             if (file.getTask().getId() != (task.getId())) {
-                throw new IllegalArgumentException("File " + fileId + " does not belong to task " + task.getId());
+                throw new ItemNotFoundException("File " + fileId + " does not belong to task " + task.getId());
             }
 
             try {
