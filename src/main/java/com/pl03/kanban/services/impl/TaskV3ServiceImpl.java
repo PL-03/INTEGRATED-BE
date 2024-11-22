@@ -8,7 +8,6 @@ import com.pl03.kanban.kanban_entities.repositories.BoardCollaboratorsRepository
 import com.pl03.kanban.kanban_entities.repositories.BoardRepository;
 import com.pl03.kanban.kanban_entities.repositories.StatusV3Repository;
 import com.pl03.kanban.kanban_entities.repositories.TaskV3Repository;
-import com.pl03.kanban.services.FileStorageService;
 import com.pl03.kanban.utils.ListMapper;
 import com.pl03.kanban.exceptions.InvalidTaskFieldException;
 import com.pl03.kanban.services.TaskV3Service;
@@ -23,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.pl03.kanban.services.FileStorageService.MAX_FILES;
+import static com.pl03.kanban.services.impl.FileStorageServiceImpl.MAX_FILES;
 
 @Service
 public class TaskV3ServiceImpl implements TaskV3Service {
@@ -34,18 +33,18 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     private final ListMapper listMapper;
     private final BoardRepository boardRepository;
 
-    private final FileStorageService fileStorageService;
+    private final FileStorageServiceImpl fileStorageServiceImpl;
 
     @Autowired
     public TaskV3ServiceImpl(TaskV3Repository taskV3Repository, StatusV3Repository statusV3Repository,
-                             BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, ListMapper listMapper, BoardRepository boardRepository, FileStorageService fileStorageService) {
+                             BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, ListMapper listMapper, BoardRepository boardRepository, FileStorageServiceImpl fileStorageServiceImpl) {
         this.taskV3Repository = taskV3Repository;
         this.statusV3Repository = statusV3Repository;
         this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.modelMapper = modelMapper;
         this.listMapper = listMapper;
         this.boardRepository = boardRepository;
-        this.fileStorageService = fileStorageService;
+        this.fileStorageServiceImpl = fileStorageServiceImpl;
 
         // Custom mapping for status name
         modelMapper.typeMap(TaskV3.class, GetAllTaskDto.class).addMappings(mapper ->
@@ -164,13 +163,13 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         // Handle file attachments first
         List<String> unaddedFiles = new ArrayList<>();
         if (addEditTaskDto.getNewAttachments() != null && !addEditTaskDto.getNewAttachments().isEmpty()) {
-            unaddedFiles = fileStorageService.validateAndStoreFiles(
+            unaddedFiles = fileStorageServiceImpl.validateAndStoreFiles(
                     addEditTaskDto.getNewAttachments(), task);
         }
 
         // Handle file deletions
         if (addEditTaskDto.getAttachmentsToDelete() != null && !addEditTaskDto.getAttachmentsToDelete().isEmpty()) {
-            fileStorageService.deleteFiles(addEditTaskDto.getAttachmentsToDelete(), task);
+            fileStorageServiceImpl.deleteFiles(addEditTaskDto.getAttachmentsToDelete(), task);
         }
 
         // Validate and update other task fields

@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pl03.kanban.dtos.*;
 import com.pl03.kanban.kanban_entities.repositories.BoardRepository;
-import com.pl03.kanban.services.FileStorageService;
+import com.pl03.kanban.services.impl.FileStorageServiceImpl;
 import com.pl03.kanban.services.TaskV3Service;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,14 +36,14 @@ public class TaskController {
 
     private final BoardRepository boardRepository;
 
-    private final FileStorageService fileStorageService;
+    private final FileStorageServiceImpl fileStorageServiceImpl;
 
     @Autowired
-    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository, FileStorageService fileStorageService) {
+    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository, FileStorageServiceImpl fileStorageServiceImpl) {
         this.taskV3Service = taskV3Service;
         this.jwtTokenUtils = jwtTokenUtils;
         this.boardRepository = boardRepository;
-        this.fileStorageService = fileStorageService;
+        this.fileStorageServiceImpl = fileStorageServiceImpl;
     }
 
     @GetMapping
@@ -136,32 +136,6 @@ public class TaskController {
         String userId = getUserIdFromToken(token);
         AddEditTaskDto addEditTaskById = taskV3Service.deleteTaskById(boardId, taskId, userId);
         return ResponseEntity.ok(addEditTaskById);
-    }
-
-    @GetMapping("/{taskId}/attachments/{fileName:.+}")
-    public ResponseEntity<Resource> downloadFile(
-            @PathVariable String boardId,
-            @PathVariable int taskId,
-            @PathVariable String fileName,
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
-
-        String userId = null;
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            if (jwtTokenUtils.validateToken(token)) {
-                userId = getUserIdFromToken(token);
-            }
-        }
-
-        // Verify access to the board/task
-        taskV3Service.getTaskById(boardId, taskId, userId); // This will throw exception if access is denied
-
-        Resource resource = fileStorageService.loadFileAsResource(fileName, taskId);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
-                .body(resource);
     }
 
     private String getUserIdFromToken(String token) {

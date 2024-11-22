@@ -353,7 +353,7 @@ public class BoardServiceImpl implements BoardService {
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         if (!board.getUser().getOid().equals(userId)) {
-            // Check if the user is a collaborator with WRITE access
+            // Check if the user is a collaborator with write access
             Optional<BoardCollaborators> collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, userId);
             if (collaborator.isEmpty() || collaborator.get().getAccessRight() != BoardCollaborators.AccessRight.WRITE) {
                 throw new UnauthorizedAccessException("Only the board owner or collaborators with WRITE access can perform this operation", null);
