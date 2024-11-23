@@ -28,4 +28,6 @@ public interface BoardService {
     CollaboratorResponse updateCollaboratorAccessRight(String boardId, String collabOid, String accessRight, String requesterOid);
 
     void removeCollaborator(String boardId, String collabOid, String requesterOid);
+    CollaboratorResponse acceptInvitation(String boardId, String userOid);
+    void declineInvitation(String boardId, String userOid);
 }

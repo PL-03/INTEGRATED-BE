@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 public interface BoardRepository extends JpaRepository<Board, String> {
     boolean existsById(String id);
 
+    boolean existsByUserOid(String userOid);
+
 }

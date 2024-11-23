@@ -136,6 +136,24 @@ public class BoardController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PatchMapping("/{id}/collabs/{userOid}/accept")
+    public ResponseEntity<CollaboratorResponse> acceptInvitation(
+            @PathVariable String id,
+            @PathVariable String userOid) {
+        CollaboratorResponse response = boardService.acceptInvitation(id, userOid);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @DeleteMapping("/{id}/collabs/{userOid}/decline")
+    public ResponseEntity<Void> declineInvitation(
+            @PathVariable String id,
+            @PathVariable String userOid) {
+        boardService.declineInvitation(id, userOid);
+        return ResponseEntity.ok().build();
+    }
+
+
     @PatchMapping("/{id}/collabs/{collabOid}")
     public ResponseEntity<CollaboratorResponse> updateCollaboratorAccessRight(
             @PathVariable String id,

@@ -13,17 +13,17 @@ import com.pl03.kanban.services.BoardService;
 import com.pl03.kanban.services.StatusService;
 import com.pl03.kanban.user_entities.User;
 import com.pl03.kanban.user_entities.UserRepository;
+import com.pl03.kanban.utils.WebUtils;
 import jakarta.validation.constraints.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,22 +35,32 @@ public class BoardServiceImpl implements BoardService {
     private final BoardCollaboratorsRepository boardCollaboratorsRepository;
     private final ModelMapper modelMapper;
     private final StatusService statusService;
+    private final JavaMailSender javaMailSender;
 
     private static final int MAX_BOARD_NAME_LENGTH = 120;
 
+    // This map stores the access right temporarily before it's accepted
+    private static final Map<String, BoardCollaborators.AccessRight> tempAccessRights = new HashMap<>(); // for accept invitation
+
+
     @Autowired
-    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, UserRepository userRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, StatusService statusService) {
+    public BoardServiceImpl(BoardRepository boardRepository, UsersRepository usersRepository, UserRepository userRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, ModelMapper modelMapper, StatusService statusService, JavaMailSender javaMailSender) {
         this.boardRepository = boardRepository;
         this.usersRepository = usersRepository;
         this.userRepository = userRepository;
         this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.modelMapper = modelMapper;
         this.statusService = statusService;
+        this.javaMailSender = javaMailSender;
     }
 
     @Override
     @Transactional(transactionManager = "kanbanTransactionManager")
     public BoardResponse createBoard(BoardRequest request, String ownerOid, String ownerName) {
+        // Check if user already has a board
+        if (boardRepository.existsByUserOid(ownerOid)) {
+            throw new InvalidBoardFieldException("User can create only 1 board", null);
+        }
         // Validate the board name
         ErrorResponse errorResponse = validateBoardFields(request);
         if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
@@ -124,7 +134,7 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
-    @Transactional(transactionManager = "kanbanTransactionManager")
+        @Transactional(transactionManager = "kanbanTransactionManager")
     public BoardResponse updateBoardVisibility(String boardId, Map<String, String> updateRequest, String ownerOid) {
         // Fetch the board by id
         Board board = boardRepository.findById(boardId)
@@ -197,7 +207,6 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
-//    @Transactional //using both db
     public CollaboratorResponse addBoardCollaborator(String boardId, CollaboratorRequest request, String ownerOid) {
         // Fetch the board and check authorization first
         Board board = boardRepository.findById(boardId)
@@ -216,22 +225,14 @@ public class BoardServiceImpl implements BoardService {
             throw new InvalidBoardFieldException("Access right must be provided", null);
         }
 
-        // Convert the access right string to an enum
-        BoardCollaborators.AccessRight accessRight;
-        try {
-            accessRight = BoardCollaborators.AccessRight.valueOf(request.getAccessRight().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
-        }
-
-        // Fetch user from shared database
+        // Fetch user from the shared database
         User authenticatedUser = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ItemNotFoundException("User not found with email: " + request.getEmail()));
 
         Users users = usersRepository.findByEmail(authenticatedUser.getEmail())
                 .orElse(null);
 
-        if (users == null) {
+        if (users == null) { //if user is not in team's db yet
             users = new Users();
             users.setOid(authenticatedUser.getOid());
             users.setUsername(authenticatedUser.getUsername());
@@ -245,23 +246,90 @@ public class BoardServiceImpl implements BoardService {
             throw new ConflictException("Cannot add board owner as a collaborator");
         }
 
-        // Check if the user is already a collaborator
+        // Check if the user is already a collaborator or pending collaborator
         if (boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, users.getOid())) {
-            throw new ConflictException("User is already a collaborator");
+            throw new ConflictException("The user is already a collaborator or pending collaborator of this board");
         }
 
-        // Create the collaborator object and save it
+        // Store the accessRight temporarily in memory
+        tempAccessRights.put(boardId + "-" + users.getOid(), BoardCollaborators.AccessRight.valueOf(request.getAccessRight().toUpperCase()));
+
+        // Create the PENDING collaborator
         BoardCollaborators collaborator = new BoardCollaborators();
-        collaborator.setId(new BoardCollaboratorsId(board.getId(), users.getOid()));
+        collaborator.setId(new BoardCollaboratorsId(boardId, users.getOid()));
         collaborator.setBoard(board);
         collaborator.setUser(users);
-        collaborator.setAccessRight(accessRight);
+        collaborator.setAccessRight(BoardCollaborators.AccessRight.PENDING); // Set as PENDING initially
         collaborator.setName(users.getName());
         collaborator.setEmail(users.getEmail());
+        boardCollaboratorsRepository.save(collaborator);
 
-        BoardCollaborators savedCollaborator = boardCollaboratorsRepository.save(collaborator);
-        return mapToCollaboratorResponse(savedCollaborator);
+        // Send invitation email
+        sendInvitationEmail(board, request, users);
+
+        return mapToCollaboratorResponse(collaborator);
     }
+
+    public void sendInvitationEmail(Board board, CollaboratorRequest request, Users users) {
+        // Send invitation email
+        String subject = String.format("%s has invited you to collaborate with %s access right on %s",
+                board.getUser().getName(), request.getAccessRight(), board.getName());
+
+        String invitationLink = String.format("%s/board/%s/collab/invitations", WebUtils.getBaseUrl(), board.getId());
+
+        String emailBody = String.format(
+                "Hi, %s,\n\n%s has invited you to collaborate on the board \"%s\" with %s access rights.\n\nClick the link below to accept or decline the invitation:\n%s\n\nThank you,\nITBKK-PL3",
+                users.getName(), board.getUser().getName(), board.getName(), request.getAccessRight(), invitationLink);
+
+        try {
+            sendSimpleEmail(users.getEmail(), subject, emailBody);
+        } catch (Exception e) {
+            throw new EmailSendException(String.format("We could not send an email to %s. They can accept the invitation at %s",
+                    users.getName(), invitationLink));
+        }
+    }
+
+    @Override
+    public CollaboratorResponse acceptInvitation(String boardId, String userOid) {
+        BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, userOid)
+                .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
+
+        if (collaborator.getAccessRight() != BoardCollaborators.AccessRight.PENDING) {
+            throw new ConflictException("Invitation has already been accepted or declined");
+        }
+
+        // Retrieve the original access right from the map
+        BoardCollaborators.AccessRight originalAccessRight = tempAccessRights.get(boardId + "-" + userOid);
+        if (originalAccessRight == null) {
+            throw new ConflictException("Original access right not found for the collaborator");
+        }
+
+        // Update the access right to the original one
+        collaborator.setAccessRight(originalAccessRight);
+
+        // Save the updated collaborator
+        boardCollaboratorsRepository.save(collaborator);
+
+        // remove the entry from the map (if it's no longer needed)
+        tempAccessRights.remove(boardId + "-" + userOid);
+
+        return mapToCollaboratorResponse(collaborator);
+    }
+
+
+    @Override
+    public void declineInvitation(String boardId, String userOid) {
+        BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, userOid)
+                .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
+
+        if (collaborator.getAccessRight() != BoardCollaborators.AccessRight.PENDING) {
+            throw new ConflictException("Invitation has already been accepted or declined");
+        }
+
+        boardCollaboratorsRepository.delete(collaborator);
+        tempAccessRights.remove(boardId + "-" + userOid);
+    }
+
 
     @Override
     public CollaboratorResponse updateCollaboratorAccessRight(String boardId, String collabOid, String accessRight, String requesterOid) {
@@ -313,6 +381,16 @@ public class BoardServiceImpl implements BoardService {
                 .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
 
         boardCollaboratorsRepository.delete(collaborator);
+    }
+
+    public void sendSimpleEmail(String toEmail, String subject, String body) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("noreply@intproj23.sit.kmutt.ac.th");
+        message.setReplyTo("DO NOT REPLY <noreply@intproj23.sit.kmutt.ac.th>");
+        message.setTo(toEmail);
+        message.setSubject(subject);
+        message.setText(body);
+        javaMailSender.send(message);
     }
     //    private Board getBoardAndCheckAccess(String boardId, String requesterOid) {
 //        Board board = boardRepository.findById(boardId)

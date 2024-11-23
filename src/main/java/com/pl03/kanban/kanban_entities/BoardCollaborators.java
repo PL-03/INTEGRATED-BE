@@ -45,7 +45,7 @@ public class BoardCollaborators {
     private String email; // Email of the collaborator
 
     public enum AccessRight {
-        READ, WRITE
+        READ, WRITE, PENDING
     }
 }
 
