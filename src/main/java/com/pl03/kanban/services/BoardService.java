@@ -19,15 +19,4 @@ public interface BoardService {
     BoardResponse updateBoardVisibility(String boardId, Map<String, String> updateRequest, String ownerOid);
 
     //    boolean isOwner(String boardId, String requesterOid);
-    List<CollaboratorResponse> getBoardCollaborators(String boardId, String requesterOid);
-
-    CollaboratorResponse getBoardCollaboratorByOid(String boardId, String collabOid, String requesterOid);
-
-    CollaboratorResponse addBoardCollaborator(String boardId, CollaboratorRequest request, String ownerOid);
-
-    CollaboratorResponse updateCollaboratorAccessRight(String boardId, String collabOid, String accessRight, String requesterOid);
-
-    void removeCollaborator(String boardId, String collabOid, String requesterOid);
-    CollaboratorResponse acceptInvitation(String boardId, String userOid);
-    void declineInvitation(String boardId, String userOid);
 }

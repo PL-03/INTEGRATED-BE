@@ -173,9 +173,9 @@ public class TaskV3ServiceImpl implements TaskV3Service {
         }
 
         // Validate and update other task fields
-        if (addEditTaskDto == null || isEmptyTaskDto(addEditTaskDto)) {
-            throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
-        }
+//        if (isEmptyTaskDto(addEditTaskDto)) {
+//            throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
+//        }
 
         ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);
         if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
