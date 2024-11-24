@@ -23,10 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -63,38 +60,37 @@ public class FileStorageServiceImpl implements FileStorageService {
         for (int i = 0; i < files.size(); i++) {
             MultipartFile file = files.get(i);
 
-            // Skip if we've reached the limit
             if (i >= availableSlots) {
                 unaddedFiles.add(file.getOriginalFilename());
                 continue;
             }
 
-            // Validate file size
             if (file.getSize() > MAX_FILE_SIZE) {
-                throw new InvalidFileException("File " + file.getOriginalFilename() + " exceeds maximum size of 20MB");
+                throw new InvalidFileException("File " + file.getOriginalFilename() + " exceeds the maximum size of 20MB");
             }
 
-            // Check for duplicate filename in current task
             if (existingFilenames.contains(file.getOriginalFilename())) {
                 throw new ConflictException("File " + file.getOriginalFilename() + " already exists in this task");
             }
 
             try {
-                // store file
-                String fileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
-                Path targetLocation = this.fileStorageLocation.resolve(fileName);
+                // Generate a unique name for storage
+                String originalFilename = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+                String uniqueFilename = UUID.randomUUID() + "_" + originalFilename;
+
+                Path targetLocation = this.fileStorageLocation.resolve(uniqueFilename);
                 Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-                // Create file storage entry
+                // Store metadata
                 FileStorage fileStorage = new FileStorage();
-                fileStorage.setName(fileName); // Store original filename for display
+                fileStorage.setName(originalFilename); // Original name for user-facing purposes
                 fileStorage.setType(file.getContentType());
                 fileStorage.setPath(targetLocation.toString());
                 fileStorage.setTask(task);
 
                 fileStorageRepository.save(fileStorage);
-                task.getFiles().add(fileStorage); // Add to task's collection
-                existingFilenames.add(fileName);
+                task.getFiles().add(fileStorage);
+                existingFilenames.add(originalFilename);
 
             } catch (IOException ex) {
                 throw new RuntimeException("Could not store file " + file.getOriginalFilename(), ex);
@@ -105,27 +101,83 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     @Override
-    public void deleteFiles(List<Long> fileIds, TaskV3 task) {
-        for (Long fileId : fileIds) {
-            FileStorage file = fileStorageRepository.findById(fileId)
-                    .orElseThrow(() -> new ItemNotFoundException("File not found with id: " + fileId));
+    public void deleteFilesByNames(Set<String> fileNames, TaskV3 task) {
+        List<FileStorage> filesToDelete = task.getFiles().stream()
+                .filter(file -> fileNames.contains(file.getName()))
+                .collect(Collectors.toList());
 
-            if (file.getTask().getId() != (task.getId())) {
-                throw new ItemNotFoundException("File " + fileId + " does not belong to task " + task.getId());
-            }
-
+        for (FileStorage file : filesToDelete) {
+            System.out.println("Deleting file: " + file.getPath());
             try {
-                Files.deleteIfExists(Paths.get(file.getPath()));
+                // Delete the file from the file system
+                Path filePath = Paths.get(file.getPath()).normalize();
+                Files.deleteIfExists(filePath);
+
+                // Remove file metadata from the database
                 fileStorageRepository.delete(file);
-            } catch (IOException ex) {
-                throw new RuntimeException("Error deleting file " + file.getName(), ex);
+
+            } catch (IOException e) {
+                throw new RuntimeException("Could not delete file: " + file.getName(), e);
             }
         }
+
+        // Remove files from the task's collection
+        task.getFiles().removeAll(filesToDelete);
     }
+
+    @Override
+    public void deleteAllFiles(TaskV3 task) {
+        if (task.getFiles() == null || task.getFiles().isEmpty()) {
+            return;
+        }
+
+        // Collect all file names to delete
+        Set<String> fileNames = task.getFiles().stream()
+                .map(FileStorage::getName)
+                .collect(Collectors.toSet());
+
+        // Reuse deleteFilesByNames to handle the deletion
+        deleteFilesByNames(fileNames, task);
+    }
+
+
+//    @Override
+//    public void deleteAllTaskFiles(TaskV3 task) {
+//        if (task.getFiles() == null || task.getFiles().isEmpty()) {
+//            return;
+//        }
+//
+//        List<FileStorage> filesToDelete = new ArrayList<>(task.getFiles());
+//
+//        for (FileStorage file : filesToDelete) {
+//            try {
+//                // Delete physical file
+//                Path filePath = Paths.get(file.getPath()).normalize();
+//                Files.deleteIfExists(filePath);
+//
+//                // Remove from database
+//                fileStorageRepository.delete(file);
+//            } catch (IOException e) {
+//                throw new RuntimeException("Could not delete file: " + file.getName(), e);
+//            }
+//        }
+//
+//        // Clear the task's files collection
+//        task.getFiles().clear();
+//    }
+
+    @Override
+    public Set<Long> getExistingFileIds(int taskId) {
+        return fileStorageRepository.findByTaskId(taskId)
+                .stream()
+                .map(FileStorage::getId)
+                .collect(Collectors.toSet());
+    }
+
+
     @Override
     public Resource loadFileAsResource(String fileName, int taskId) {
-        FileStorage fileMetadata = fileStorageRepository.findByName(fileName)
-                .filter(file -> file.getTask().getId() == taskId)
+        FileStorage fileMetadata = fileStorageRepository.findByNameAndTask_Id(fileName, taskId)
                 .orElseThrow(() -> new ItemNotFoundException("File not found or does not belong to the specified task"));
 
         try {
@@ -142,6 +194,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         }
     }
 
+    @Override
     public String getFileContentType(Resource resource) {
         try {
             return Files.probeContentType(Paths.get(resource.getURI()));
@@ -149,4 +202,16 @@ public class FileStorageServiceImpl implements FileStorageService {
             return MediaType.APPLICATION_OCTET_STREAM_VALUE; // Default to binary if type cannot be determined
         }
     }
+//    @Override
+//    public List<Long> getExistingFileIds(int taskId) {
+//        // Fetch the list of files related to the task using fileStorageRepository
+//        List<FileStorage> fileStorageList = fileStorageRepository.findByTaskId(taskId);
+//
+//        // Extract file IDs from the fileStorage list
+//        return fileStorageList.stream()
+//                .map(FileStorage::getId)  // Get the ID of each FileStorage entity
+//                .collect(Collectors.toList());
+//    }
+
+
 }

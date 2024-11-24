@@ -101,7 +101,12 @@ public class BoardServiceImpl implements BoardService {
         // Check access conditions for the board
         boolean isPublic = board.getVisibility() == Board.Visibility.PUBLIC;
         boolean isOwner = requesterOid != null && board.getUser().getOid().equals(requesterOid);
-        boolean isCollaborator = requesterOid != null && boardCollaboratorsRepository.existsByBoardIdAndUserOid(board.getId(), requesterOid);
+        boolean isCollaborator = requesterOid != null &&
+                boardCollaboratorsRepository.existsByBoardIdAndUserOidAndAccessRightNot(
+                        board.getId(),
+                        requesterOid,
+                        BoardCollaborators.AccessRight.PENDING
+                ); //check for collaborator(access level != PENDING)
 
         // If the board is public, the requester is the owner, or the requester is a collaborator, return the board
         if (isPublic || isOwner || isCollaborator) {
@@ -120,8 +125,9 @@ public class BoardServiceImpl implements BoardService {
                         board.getVisibility() == Board.Visibility.PUBLIC || // Include public boards
                                 (requesterOid != null && (
                                         board.getUser().getOid().equals(requesterOid) || // Include boards owned by the requester
-                                                boardCollaboratorsRepository.existsByBoardIdAndUserOid(board.getId(), requesterOid)
-                                ))              // Include boards where the requester is a collaborator
+                                                boardCollaboratorsRepository.existsByBoardIdAndUserOidAndAccessRightNot(
+                                                        board.getId(), requesterOid, BoardCollaborators.AccessRight.PENDING)
+                                )) // Include boards where the requester is a valid collaborator
                 )
                 .map(board -> createBoardResponse(board, board.getUser().getName())) // Map to response
                 .collect(Collectors.toList()); // Collect to list
@@ -168,26 +174,14 @@ public class BoardServiceImpl implements BoardService {
         return createBoardResponse(updatedBoard, updatedBoard.getUser().getName());
     }
 
-//    @Override
-//    public boolean isOwner(String boardId, String userOid) {
-//        Board board = boardRepository.findById(boardId)
-//                .orElseThrow(() -> new ItemNotFoundException("Board not found with id: " + boardId));
-//        return board.getUser().getOid().equals(userOid);
-//    }
-
-//    private BoardResponse createBoardResponse(Board board, String ownerName) {
-//        BoardResponse response = modelMapper.map(board, BoardResponse.class);
-//        response.setOwner(new BoardResponse.OwnerResponse(board.getUser().getOid(), ownerName));  // Get OID from user
-//        return response;
-//    }
-
     static void getBoardAndCheckAccess(String boardId, String userId, BoardRepository boardRepository, BoardCollaboratorsRepository boardCollaboratorsRepository) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
         if (board.getVisibility() != Board.Visibility.PUBLIC &&
-                !board.getUser().getOid().equals(userId) && //check ownership
-                !boardCollaboratorsRepository.existsByBoardIdAndUserOid(boardId, userId)) { //check is a collaborator or not
+                !board.getUser().getOid().equals(userId) && // Check ownership
+                !boardCollaboratorsRepository.existsByBoardIdAndUserOidAndAccessRightNot(
+                        boardId, userId, BoardCollaborators.AccessRight.PENDING)) { // Check is a valid collaborator
             throw new UnauthorizedAccessException("Access to this board is restricted", null);
         }
     }

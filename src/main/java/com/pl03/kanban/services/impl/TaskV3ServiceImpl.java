@@ -18,6 +18,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -156,62 +158,108 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     public AddEditTaskDtoWithAttachments updateTask(String boardId, int taskId, AddEditTaskDtoWithAttachments addEditTaskDto, String userId) {
         BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
-        // Use the new repository method that fetches files eagerly
+        // Fetch task with files
         TaskV3 task = taskV3Repository.findByIdAndBoardIdWithFiles(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
 
-        // Handle file attachments first
-        List<String> unaddedFiles = new ArrayList<>();
-        if (addEditTaskDto.getNewAttachments() != null && !addEditTaskDto.getNewAttachments().isEmpty()) {
-            unaddedFiles = fileStorageServiceImpl.validateAndStoreFiles(
-                    addEditTaskDto.getNewAttachments(), task);
-        }
-
-        // Handle file deletions
+        // Handle clearing all files if specified
         if (addEditTaskDto.getAttachmentsToDelete() != null && !addEditTaskDto.getAttachmentsToDelete().isEmpty()) {
-            fileStorageServiceImpl.deleteFiles(addEditTaskDto.getAttachmentsToDelete(), task);
+            fileStorageServiceImpl.deleteAllFiles(task);
+            taskV3Repository.save(task); // Save to ensure the files are removed from the database
+
+            // If no new attachments, update other fields and return
+            if (addEditTaskDto.getNewAttachments() == null || addEditTaskDto.getNewAttachments().isEmpty()) {
+                updateTaskFields(task, addEditTaskDto); //update task field
+                TaskV3 updatedTask = taskV3Repository.save(task);
+                return mapTaskToDto(updatedTask);
+            }
         }
 
-        // Validate and update other task fields
-//        if (isEmptyTaskDto(addEditTaskDto)) {
-//            throw new InvalidTaskFieldException("Task's input must have at least task's title to update task", null);
-//        }
+        // Get existing file names
+        Set<String> existingFileNames = task.getFiles().stream()
+                .map(FileStorage::getName)
+                .collect(Collectors.toSet());
 
+        // Get incoming file names
+        Set<String> incomingFileNames = addEditTaskDto.getNewAttachments() != null
+                ? addEditTaskDto.getNewAttachments().stream()
+                .map(file -> StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename())))
+                .collect(Collectors.toSet())
+                : Collections.emptySet();
+
+        // Identify files to delete and add
+        Set<String> filesToDelete = new HashSet<>(existingFileNames);
+        filesToDelete.removeAll(incomingFileNames);
+
+        Set<String> filesToAdd = new HashSet<>(incomingFileNames);
+        filesToAdd.removeAll(existingFileNames);
+
+        // Delete files
+        if (!filesToDelete.isEmpty()) {
+            fileStorageServiceImpl.deleteFilesByNames(filesToDelete, task);
+            taskV3Repository.save(task); // Persist changes to the task's file list after deletion
+        }
+
+        // Add new files
+        List<String> unaddedFiles = new ArrayList<>();
+        if (!filesToAdd.isEmpty()) {
+            List<MultipartFile> filesToStore = addEditTaskDto.getNewAttachments().stream()
+                    .filter(file -> filesToAdd.contains(StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()))))
+                    .collect(Collectors.toList());
+
+            unaddedFiles = fileStorageServiceImpl.validateAndStoreFiles(filesToStore, task);
+        }
+
+        // Update task fields
+        updateTaskFields(task, addEditTaskDto);
+
+        // Save the updated task
+        TaskV3 updatedTask = taskV3Repository.save(task);
+
+        // Handle any files that couldn't be added due to limits
+        if (!unaddedFiles.isEmpty()) {
+            throw new IllegalArgumentException("Each task can have at most " + MAX_FILES +
+                    " files. The following files were not added: " + String.join(", ", unaddedFiles));
+        }
+
+        return mapTaskToDto(updatedTask);
+    }
+
+    private void updateTaskFields(TaskV3 task, AddEditTaskDtoWithAttachments addEditTaskDto) {
         ErrorResponse errorResponse = validateTaskFields(addEditTaskDto);
         if (errorResponse != null && !errorResponse.getErrors().isEmpty()) {
             throw new InvalidTaskFieldException("Validation error. Check 'errors' field for details", errorResponse.getErrors());
         }
 
-        // Update task fields
         task.setTitle(addEditTaskDto.getTitle() == null ? task.getTitle() : addEditTaskDto.getTitle().trim());
         task.setDescription(addEditTaskDto.getDescription() != null ? addEditTaskDto.getDescription().trim() : null);
         task.setAssignees(addEditTaskDto.getAssignees() != null ? addEditTaskDto.getAssignees().trim() : null);
 
         if (addEditTaskDto.getStatus() != null && !addEditTaskDto.getStatus().isEmpty()) {
             StatusV3 statusV3 = statusV3Repository.findById(Integer.parseInt(addEditTaskDto.getStatus()))
-                    .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist in board id: " + boardId));
+                    .orElseThrow(() -> new ItemNotFoundException("Status with id " + addEditTaskDto.getStatus() + " does not exist"));
             task.setStatusV3(statusV3);
         }
-
-        // Save the updated task
-        TaskV3 updatedTask = taskV3Repository.save(task);
-
-        if (!unaddedFiles.isEmpty()) {
-            throw new IllegalArgumentException("Each task can have at most " + MAX_FILES +
-                    " files. The following files are not added: " + String.join(", ", unaddedFiles));
-        }
-
-        // Map existing attachments to FileAttachmentDto
-        List<FileAttachmentDto> existingAttachments = updatedTask.getFiles().stream()
-                .map(file -> new FileAttachmentDto(file.getId(), file.getName(), file.getType(), file.getAddedOn()))
-                .collect(Collectors.toList());
-
-        // Map to response DTO
-        AddEditTaskDtoWithAttachments response = modelMapper.map(updatedTask, AddEditTaskDtoWithAttachments.class);
-        response.setExistingAttachments(existingAttachments); // Include attachments in the response
-        return response;
     }
 
+    private AddEditTaskDtoWithAttachments mapTaskToDto(TaskV3 task) {
+        // Initialize response DTO
+        AddEditTaskDtoWithAttachments response = modelMapper.map(task, AddEditTaskDtoWithAttachments.class);
+
+        // Initialize empty list for attachments
+        List<FileAttachmentDto> existingAttachments = new ArrayList<>();
+
+        // Only map files if they exist and are not empty
+        if (task.getFiles() != null && !task.getFiles().isEmpty()) {
+            existingAttachments = task.getFiles().stream()
+                    .filter(file -> file.getType() != null) // Add null check for type
+                    .map(file -> new FileAttachmentDto(file.getId(), file.getName(), file.getType(), file.getAddedOn()))
+                    .collect(Collectors.toList());
+        }
+
+        response.setExistingAttachments(existingAttachments);
+        return response;
+    }
 
     private boolean isEmptyTaskDto(AddEditTaskDto dto) {
         return (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) &&

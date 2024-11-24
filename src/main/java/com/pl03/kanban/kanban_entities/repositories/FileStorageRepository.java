@@ -11,5 +11,8 @@ import java.util.Optional;
 @Repository
 public interface FileStorageRepository extends JpaRepository<FileStorage,Long> {
     Optional<FileStorage> findByName(String fileName);
-    List<FileStorage> findByTask(TaskV3 task);
+    List<FileStorage> findByTaskId(int taskId);
+    Optional<FileStorage> findByNameAndTask_Id(String name, int taskId);
+
+
 }

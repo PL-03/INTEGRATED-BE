@@ -4,18 +4,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pl03.kanban.dtos.*;
 import com.pl03.kanban.kanban_entities.repositories.BoardRepository;
-import com.pl03.kanban.services.impl.FileStorageServiceImpl;
+import com.pl03.kanban.services.FileStorageService;
 import com.pl03.kanban.services.TaskV3Service;
 import com.pl03.kanban.utils.JwtTokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -36,14 +34,14 @@ public class TaskController {
 
     private final BoardRepository boardRepository;
 
-    private final FileStorageServiceImpl fileStorageServiceImpl;
+    private final FileStorageService fileStorageService;
 
     @Autowired
-    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository, FileStorageServiceImpl fileStorageServiceImpl) {
+    public TaskController(TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils, BoardRepository boardRepository, FileStorageService fileStorageService) {
         this.taskV3Service = taskV3Service;
         this.jwtTokenUtils = jwtTokenUtils;
         this.boardRepository = boardRepository;
-        this.fileStorageServiceImpl = fileStorageServiceImpl;
+        this.fileStorageService = fileStorageService;
     }
 
     @GetMapping
@@ -116,8 +114,13 @@ public class TaskController {
             }
 
             // Set the files if provided
-            if (files != null && !files.isEmpty()) {
-                addEditTaskDto.setNewAttachments(files);
+            if (files != null) {
+                if (files.isEmpty()) {
+                    // Special case: clear all attachments if files list is empty
+                    addEditTaskDto.setAttachmentsToDelete(new ArrayList<>(fileStorageService.getExistingFileIds(taskId)));
+                } else {
+                    addEditTaskDto.setNewAttachments(files);
+                }
             }
 
         } catch (JsonProcessingException e) {

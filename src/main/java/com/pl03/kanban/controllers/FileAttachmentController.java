@@ -1,5 +1,6 @@
 package com.pl03.kanban.controllers;
 
+import com.pl03.kanban.services.FileStorageService;
 import com.pl03.kanban.services.TaskV3Service;
 import com.pl03.kanban.services.impl.FileStorageServiceImpl;
 import com.pl03.kanban.utils.JwtTokenUtils;
@@ -24,12 +25,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/v3/boards/{boardId}/tasks")
 public class FileAttachmentController {
-    private final FileStorageServiceImpl fileStorageServiceImpl;
+    private final FileStorageService fileStorageService;
     private final TaskV3Service taskV3Service;
     private final JwtTokenUtils jwtTokenUtils;
     @Autowired
-    public FileAttachmentController(FileStorageServiceImpl fileStorageServiceImpl, TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils) {
-        this.fileStorageServiceImpl = fileStorageServiceImpl;
+    public FileAttachmentController( FileStorageService fileStorageService, TaskV3Service taskV3Service, JwtTokenUtils jwtTokenUtils) {
+        this.fileStorageService = fileStorageService;
         this.taskV3Service = taskV3Service;
         this.jwtTokenUtils = jwtTokenUtils;
     }
@@ -52,8 +53,8 @@ public class FileAttachmentController {
         // Verify access to the board/task
         taskV3Service.getTaskById(boardId, taskId, userId); // Throws exception if access is denied
 
-        Resource resource = fileStorageServiceImpl.loadFileAsResource(fileName, taskId);
-        String contentType = fileStorageServiceImpl.getFileContentType(resource);
+        Resource resource = fileStorageService.loadFileAsResource(fileName, taskId);
+        String contentType = fileStorageService.getFileContentType(resource);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
@@ -79,8 +80,8 @@ public class FileAttachmentController {
         // Verify access to the board/task
         taskV3Service.getTaskById(boardId, taskId, userId); // Throws exception if access is denied
 
-        Resource resource = fileStorageServiceImpl.loadFileAsResource(fileName, taskId);
-        String contentType = fileStorageServiceImpl.getFileContentType(resource);
+        Resource resource = fileStorageService.loadFileAsResource(fileName, taskId);
+        String contentType = fileStorageService.getFileContentType(resource);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
