@@ -50,10 +50,23 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         getBoardAndCheckAccess(boardId, requesterOid, boardRepository, boardCollaboratorsRepository);
 
         List<BoardCollaborators> collaborators = boardCollaboratorsRepository.findByBoardId(boardId);
+
         return collaborators.stream()
-                .map(this::mapToCollaboratorResponse)
+                .map(collaborator -> {
+                    String tempAssignedRight = String.valueOf(tempAccessRights.getOrDefault(
+                            boardId + "-" + collaborator.getUser().getOid(), null));
+                    return CollaboratorResponse.builder()
+                            .oid(collaborator.getUser().getOid())
+                            .name(collaborator.getName())
+                            .email(collaborator.getEmail())
+                            .accessRight(collaborator.getAccessRight().name())
+                            .assignedAccessRight(tempAssignedRight != null ? tempAssignedRight : null)
+                            .addedOn(collaborator.getAddedOn())
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
+
 
     @Override
     public CollaboratorResponse getBoardCollaboratorByOid(String boardId, String collabOid, String requesterOid) {
@@ -62,8 +75,19 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
                 .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
 
-        return mapToCollaboratorResponse(collaborator);
+        String tempAssignedRight = String.valueOf(tempAccessRights.getOrDefault(
+                boardId + "-" + collaborator.getUser().getOid(), null));
+
+        return CollaboratorResponse.builder()
+                .oid(collaborator.getUser().getOid())
+                .name(collaborator.getName())
+                .email(collaborator.getEmail())
+                .accessRight(collaborator.getAccessRight().name())
+                .assignedAccessRight(tempAssignedRight != null ? tempAssignedRight : null)
+                .addedOn(collaborator.getAddedOn())
+                .build();
     }
+
 
     @Override
     public CollaboratorResponse addBoardCollaborator(String boardId, CollaboratorRequest request, String ownerOid) {
@@ -111,7 +135,8 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         }
 
         // Store the accessRight temporarily in memory
-        tempAccessRights.put(boardId + "-" + users.getOid(), BoardCollaborators.AccessRight.valueOf(request.getAccessRight().toUpperCase()));
+        BoardCollaborators.AccessRight accessRight = BoardCollaborators.AccessRight.valueOf(request.getAccessRight().toUpperCase());
+        tempAccessRights.put(boardId + "-" + users.getOid(), accessRight);
 
         // Create the PENDING collaborator
         BoardCollaborators collaborator = new BoardCollaborators();
@@ -126,7 +151,15 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         // Send invitation email
         sendInvitationEmail(board, request, users);
 
-        return mapToCollaboratorResponse(collaborator);
+        // Return response with assigned access right
+        return CollaboratorResponse.builder()
+                .oid(users.getOid())
+                .name(users.getName())
+                .email(users.getEmail())
+                .accessRight(BoardCollaborators.AccessRight.PENDING.name())
+                .assignedAccessRight(accessRight.name()) // Set assigned access right
+                .addedOn(collaborator.getAddedOn())
+                .build();
     }
 
     public void sendInvitationEmail(Board board, CollaboratorRequest request, Users users) {

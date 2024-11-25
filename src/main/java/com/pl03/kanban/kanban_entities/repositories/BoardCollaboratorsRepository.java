@@ -20,9 +20,8 @@ public interface BoardCollaboratorsRepository extends JpaRepository<BoardCollabo
     Optional<BoardCollaborators> findByBoardIdAndUserOid(String boardId, String userOid);
 
     boolean existsByBoardIdAndUserOid(String boardId, String userOid);
+
     boolean existsByBoardIdAndUserOidAndAccessRightNot(String boardId, String userOid, BoardCollaborators.AccessRight accessRight);
-
-
 }
 
 

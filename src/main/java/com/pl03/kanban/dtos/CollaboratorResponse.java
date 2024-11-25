@@ -15,6 +15,7 @@ public class CollaboratorResponse {
 
 //    @JsonProperty("access_right")
     private String accessRight;
+    private String assignedAccessRight;
 
 //    @JsonProperty("added_on")
     private Timestamp addedOn;
