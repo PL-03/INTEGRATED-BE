@@ -15,7 +15,7 @@ public class WebUtils {
 
         HttpServletRequest request = attributes.getRequest();
         return request.getScheme() + "://" + request.getServerName() +
-                (request.getServerPort() == 80 || request.getServerPort() == 443
+                (request.getServerPort() == 80 || request.getServerPort() == 443 || request.getServerPort() == 8080 //for dev
                         ? "" : ":" + request.getServerPort());
     }
 }

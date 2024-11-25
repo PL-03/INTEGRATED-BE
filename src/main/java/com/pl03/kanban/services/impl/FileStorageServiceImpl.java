@@ -8,6 +8,8 @@ import com.pl03.kanban.kanban_entities.TaskV3;
 import com.pl03.kanban.kanban_entities.repositories.FileStorageRepository;
 import com.pl03.kanban.kanban_entities.repositories.TaskV3Repository;
 import com.pl03.kanban.services.FileStorageService;
+import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -50,6 +52,11 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
     @Override
     public List<String> validateAndStoreFiles(List<MultipartFile> files, TaskV3 task) {
+        // Return early if files list is null or empty
+        if (files == null || files.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         List<String> unaddedFiles = new ArrayList<>();
         Set<String> existingFilenames = task.getFiles().stream()
                 .map(FileStorage::getName)
@@ -59,6 +66,11 @@ public class FileStorageServiceImpl implements FileStorageService {
 
         for (int i = 0; i < files.size(); i++) {
             MultipartFile file = files.get(i);
+
+            // Skip if the file is empty or has no original filename
+            if (file.isEmpty() || file.getOriginalFilename() == null || file.getOriginalFilename().trim().isEmpty()) {
+                continue;
+            }
 
             if (i >= availableSlots) {
                 unaddedFiles.add(file.getOriginalFilename());
@@ -78,13 +90,19 @@ public class FileStorageServiceImpl implements FileStorageService {
                 String originalFilename = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
                 String uniqueFilename = UUID.randomUUID() + "_" + originalFilename;
 
+                // Validate content type before proceeding
+                String contentType = file.getContentType();
+                if (contentType == null || contentType.trim().isEmpty()) {
+                    throw new InvalidFileException("File " + originalFilename + " has invalid content type");
+                }
+
                 Path targetLocation = this.fileStorageLocation.resolve(uniqueFilename);
                 Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
                 // Store metadata
                 FileStorage fileStorage = new FileStorage();
-                fileStorage.setName(originalFilename); // Original name for user-facing purposes
-                fileStorage.setType(file.getContentType());
+                fileStorage.setName(originalFilename);
+                fileStorage.setType(contentType);
                 fileStorage.setPath(targetLocation.toString());
                 fileStorage.setTask(task);
 
@@ -102,21 +120,33 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     @Override
     public void deleteFilesByNames(Set<String> fileNames, TaskV3 task) {
+        if (fileNames == null || fileNames.isEmpty() || task.getFiles() == null || task.getFiles().isEmpty()) {
+            return;
+        }
+
         List<FileStorage> filesToDelete = task.getFiles().stream()
                 .filter(file -> fileNames.contains(file.getName()))
                 .collect(Collectors.toList());
 
         for (FileStorage file : filesToDelete) {
-            System.out.println("Deleting file: " + file.getPath());
+            if (file.getType() == null) {
+                // Log the issue but continue with deletion
+                System.out.println(("FileStorage entity has a null 'type' property: {}" + file.getName()));
+            }
+
             try {
                 // Delete the file from the file system
                 Path filePath = Paths.get(file.getPath()).normalize();
-                Files.deleteIfExists(filePath);
+                boolean deleted = Files.deleteIfExists(filePath);
+                if (!deleted) {
+                    System.out.println("File not found on filesystem: {}"+ file.getPath());
+                }
 
                 // Remove file metadata from the database
                 fileStorageRepository.delete(file);
 
             } catch (IOException e) {
+                System.out.println("Error deleting file: " + file.getName() + e);
                 throw new RuntimeException("Could not delete file: " + file.getName(), e);
             }
         }
@@ -131,12 +161,10 @@ public class FileStorageServiceImpl implements FileStorageService {
             return;
         }
 
-        // Collect all file names to delete
         Set<String> fileNames = task.getFiles().stream()
                 .map(FileStorage::getName)
                 .collect(Collectors.toSet());
 
-        // Reuse deleteFilesByNames to handle the deletion
         deleteFilesByNames(fileNames, task);
     }
 

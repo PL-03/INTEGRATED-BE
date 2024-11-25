@@ -8,7 +8,9 @@ import java.util.List;
 
 @Data
 public class AddEditTaskDtoWithAttachments extends AddEditTaskDto {
+    @JsonIgnore
     private List<MultipartFile> newAttachments;
+    @JsonIgnore
     private List<Long> attachmentsToDelete;
     private List<FileAttachmentDto> existingAttachments;
 }
