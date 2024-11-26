@@ -2,8 +2,6 @@ package com.pl03.kanban.services.impl;
 
 import com.pl03.kanban.dtos.BoardRequest;
 import com.pl03.kanban.dtos.BoardResponse;
-import com.pl03.kanban.dtos.CollaboratorRequest;
-import com.pl03.kanban.dtos.CollaboratorResponse;
 import com.pl03.kanban.exceptions.*;
 import com.pl03.kanban.kanban_entities.*;
 import com.pl03.kanban.kanban_entities.repositories.BoardCollaboratorsRepository;
@@ -11,15 +9,10 @@ import com.pl03.kanban.kanban_entities.repositories.BoardRepository;
 import com.pl03.kanban.kanban_entities.repositories.UsersRepository;
 import com.pl03.kanban.services.BoardService;
 import com.pl03.kanban.services.StatusService;
-import com.pl03.kanban.user_entities.User;
-import com.pl03.kanban.user_entities.UserRepository;
-import com.pl03.kanban.utils.WebUtils;
 import jakarta.validation.constraints.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -19,6 +19,14 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import org.springframework.stereotype.Service;
+
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,16 +41,22 @@ public class CollaboratorServiceImpl implements CollaboratorService {
     private final JavaMailSender javaMailSender;
 
     // This map stores the access right temporarily before it's accepted
-    private static final Map<String, BoardCollaborators.AccessRight> tempAccessRights = new HashMap<>(); // for accept invitation
+    private static Map<String, BoardCollaborators.AccessRight> tempAccessRights = new HashMap<>(); // for accept invitation
+    private static final String TEMP_ACCESS_RIGHTS_FILE = "tempAccessRights.json";
+    static {
+        loadTempAccessRightsFromFile();
+    }
     private final UserRepository userRepository;
     private final UsersRepository usersRepository;
+    private final WebUtils webUtils;
     @Autowired
-    public CollaboratorServiceImpl(BoardRepository boardRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, JavaMailSender javaMailSender, UserRepository userRepository, UsersRepository usersRepository) {
+    public CollaboratorServiceImpl(BoardRepository boardRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, JavaMailSender javaMailSender, UserRepository userRepository, UsersRepository usersRepository, WebUtils webUtils) {
         this.boardRepository = boardRepository;
         this.boardCollaboratorsRepository = boardCollaboratorsRepository;
         this.javaMailSender = javaMailSender;
         this.userRepository = userRepository;
         this.usersRepository = usersRepository;
+        this.webUtils = webUtils;
     }
 
     @Override
@@ -138,6 +152,9 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         BoardCollaborators.AccessRight accessRight = BoardCollaborators.AccessRight.valueOf(request.getAccessRight().toUpperCase());
         tempAccessRights.put(boardId + "-" + users.getOid(), accessRight);
 
+        // Save the updated map to the file
+        saveTempAccessRightsToFile();
+
         // Create the PENDING collaborator
         BoardCollaborators collaborator = new BoardCollaborators();
         collaborator.setId(new BoardCollaboratorsId(boardId, users.getOid()));
@@ -163,11 +180,11 @@ public class CollaboratorServiceImpl implements CollaboratorService {
     }
 
     public void sendInvitationEmail(Board board, CollaboratorRequest request, Users users) {
-        // Send invitation email
         String subject = String.format("%s has invited you to collaborate with %s access right on %s",
                 board.getUser().getName(), request.getAccessRight(), board.getName());
 
-        String invitationLink = String.format("%s/board/%s/collab/invitations", WebUtils.getBaseUrl(), board.getId());
+        // Use WebUtils to get the base URL
+        String invitationLink = String.format("%s/board/%s/collab/invitations", webUtils.getBaseUrl(), board.getId());
 
         String emailBody = String.format(
                 "Hi, %s,\n\n%s has invited you to collaborate on the board \"%s\" with %s access rights.\n\nClick the link below to accept or decline the invitation:\n%s\n\nThank you,\nITBKK-PL3",
@@ -204,6 +221,7 @@ public class CollaboratorServiceImpl implements CollaboratorService {
 
         // remove the entry from the map (if it's no longer needed)
         tempAccessRights.remove(boardId + "-" + userOid);
+        saveTempAccessRightsToFile(); //save json file
 
         return mapToCollaboratorResponse(collaborator);
     }
@@ -220,8 +238,33 @@ public class CollaboratorServiceImpl implements CollaboratorService {
 
         boardCollaboratorsRepository.delete(collaborator);
         tempAccessRights.remove(boardId + "-" + userOid);
+        saveTempAccessRightsToFile();
     }
 
+    private static void saveTempAccessRightsToFile() {
+        try (FileWriter writer = new FileWriter(TEMP_ACCESS_RIGHTS_FILE)) {
+            Gson gson = new Gson();
+            gson.toJson(tempAccessRights, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Optional: Log this exception with a logger if integrated
+        }
+    }
+
+    private static void loadTempAccessRightsFromFile() {
+        try (FileReader reader = new FileReader(TEMP_ACCESS_RIGHTS_FILE)) {
+            Gson gson = new Gson();
+            Type type = new TypeToken<Map<String, BoardCollaborators.AccessRight>>() {}.getType();
+            tempAccessRights = gson.fromJson(reader, type);
+
+            if (tempAccessRights == null) {
+                tempAccessRights = new HashMap<>();
+            }
+        } catch (IOException e) {
+            // File might not exist on the first run, so just initialize the map
+            tempAccessRights = new HashMap<>();
+        }
+    }
 
     @Override
     public CollaboratorResponse updateCollaboratorAccessRight(String boardId, String collabOid, String accessRight, String requesterOid) {
