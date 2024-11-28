@@ -14,7 +14,11 @@ public interface CollaboratorService {
 
     CollaboratorResponse updateCollaboratorAccessRight(String boardId, String collabOid, String accessRight, String requesterOid);
 
+    CollaboratorResponse updatePendingInvitationAccessRight(String boardId, String collabOid, String accessRight, String requesterOid);
+
     void removeCollaborator(String boardId, String collabOid, String requesterOid);
-    CollaboratorResponse acceptInvitation(String boardId, String userOid);
-    void declineInvitation(String boardId, String userOid);
+
+    CollaboratorResponse acceptInvitation(String boardId, String userOid, String requesterOid);
+
+    void declineInvitation(String boardId, String userOid, String requesterOid);
 }

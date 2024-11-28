@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+
 @CrossOrigin(origins = {"http://localhost:5173",
         "http://intproj23.sit.kmutt.ac.th",
         "http://intproj23.sit.kmutt.ac.th/pl3",
@@ -25,6 +26,7 @@ import java.util.Map;
 public class CollaboratorController {
     private final JwtTokenUtils jwtTokenUtils;
     private final CollaboratorService collaboratorService;
+
     @Autowired
     public CollaboratorController(JwtTokenUtils jwtTokenUtils, CollaboratorService collaboratorService) {
         this.jwtTokenUtils = jwtTokenUtils;
@@ -63,8 +65,10 @@ public class CollaboratorController {
     @PatchMapping("/{id}/collabs/{userOid}/accept")
     public ResponseEntity<CollaboratorResponse> acceptInvitation(
             @PathVariable String id,
-            @PathVariable String userOid) {
-        CollaboratorResponse response = collaboratorService.acceptInvitation(id, userOid);
+            @PathVariable String userOid,
+            @RequestHeader("Authorization") String authHeader) {
+        String requesterOid = getUserIdFromToken(authHeader.substring(7));
+        CollaboratorResponse response = collaboratorService.acceptInvitation(id, userOid, requesterOid);
         return ResponseEntity.ok(response);
     }
 
@@ -72,11 +76,12 @@ public class CollaboratorController {
     @DeleteMapping("/{id}/collabs/{userOid}/decline")
     public ResponseEntity<Void> declineInvitation(
             @PathVariable String id,
-            @PathVariable String userOid) {
-        collaboratorService.declineInvitation(id, userOid);
+            @PathVariable String userOid,
+            @RequestHeader("Authorization") String authHeader) {
+        String requesterOid = getUserIdFromToken(authHeader.substring(7));
+        collaboratorService.declineInvitation(id, userOid, requesterOid);
         return ResponseEntity.ok().build();
     }
-
 
     @PatchMapping("/{id}/collabs/{collabOid}")
     public ResponseEntity<CollaboratorResponse> updateCollaboratorAccessRight(
@@ -89,6 +94,21 @@ public class CollaboratorController {
         CollaboratorResponse response = collaboratorService.updateCollaboratorAccessRight(id, collabOid, accessRight, requesterOid);
         return ResponseEntity.ok(response);
     }
+
+    @PatchMapping("/{id}/collabs/{collabOid}/pending")
+    public ResponseEntity<CollaboratorResponse> updatePendingInvitationAccessRight(
+            @PathVariable String id,
+            @PathVariable String collabOid,
+            @RequestBody Map<String, String> request,
+            @RequestHeader("Authorization") String authHeader) {
+        String requesterOid = getUserIdFromToken(authHeader.substring(7));
+        String accessRight = request.get("accessRight");
+
+        CollaboratorResponse response = collaboratorService.updatePendingInvitationAccessRight(id, collabOid, accessRight, requesterOid);
+
+        return ResponseEntity.ok(response);
+    }
+
 
     @DeleteMapping("/{id}/collabs/{collabOid}")
     public ResponseEntity<Void> removeCollaborator(

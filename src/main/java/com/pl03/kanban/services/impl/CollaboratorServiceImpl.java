@@ -43,12 +43,15 @@ public class CollaboratorServiceImpl implements CollaboratorService {
     // This map stores the access right temporarily before it's accepted
     private static Map<String, BoardCollaborators.AccessRight> tempAccessRights = new HashMap<>(); // for accept invitation
     private static final String TEMP_ACCESS_RIGHTS_FILE = "tempAccessRights.json";
+
     static {
         loadTempAccessRightsFromFile();
     }
+
     private final UserRepository userRepository;
     private final UsersRepository usersRepository;
     private final WebUtils webUtils;
+
     @Autowired
     public CollaboratorServiceImpl(BoardRepository boardRepository, BoardCollaboratorsRepository boardCollaboratorsRepository, JavaMailSender javaMailSender, UserRepository userRepository, UsersRepository usersRepository, WebUtils webUtils) {
         this.boardRepository = boardRepository;
@@ -199,7 +202,12 @@ public class CollaboratorServiceImpl implements CollaboratorService {
     }
 
     @Override
-    public CollaboratorResponse acceptInvitation(String boardId, String userOid) {
+    public CollaboratorResponse acceptInvitation(String boardId, String userOid, String requesterOid) {
+        // Check if the requester is the invited user
+        if (!userOid.equals(requesterOid)) {
+            throw new UnauthorizedAccessException("Only the invited user can accept this invitation", null);
+        }
+
         BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, userOid)
                 .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
 
@@ -228,7 +236,12 @@ public class CollaboratorServiceImpl implements CollaboratorService {
 
 
     @Override
-    public void declineInvitation(String boardId, String userOid) {
+    public void declineInvitation(String boardId, String userOid, String requesterOid) {
+        // Check if the requester is the invited user
+        if (!userOid.equals(requesterOid)) {
+            throw new UnauthorizedAccessException("Only the invited user can decline this invitation", null);
+        }
+
         BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, userOid)
                 .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
 
@@ -246,15 +259,15 @@ public class CollaboratorServiceImpl implements CollaboratorService {
             Gson gson = new Gson();
             gson.toJson(tempAccessRights, writer);
         } catch (IOException e) {
-            e.printStackTrace();
-            // Optional: Log this exception with a logger if integrated
+            throw new RuntimeException("Failed to save temp access rights to file", e);
         }
     }
 
     private static void loadTempAccessRightsFromFile() {
         try (FileReader reader = new FileReader(TEMP_ACCESS_RIGHTS_FILE)) {
             Gson gson = new Gson();
-            Type type = new TypeToken<Map<String, BoardCollaborators.AccessRight>>() {}.getType();
+            Type type = new TypeToken<Map<String, BoardCollaborators.AccessRight>>() {
+            }.getType();
             tempAccessRights = gson.fromJson(reader, type);
 
             if (tempAccessRights == null) {
@@ -273,6 +286,10 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
                 .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
 
+        if (!boardCollaboratorsRepository.existsByBoardIdAndUserOidAndAccessRightNot(boardId, collabOid, BoardCollaborators.AccessRight.PENDING)) {
+            throw new ConflictException("This user is not a collaborator yet. The invitation is still pending"); //check for collaborator's access right != pending
+        }
+
         if (accessRight == null || accessRight.isEmpty()) {
             throw new InvalidBoardFieldException("accessRight is required", null);
         }
@@ -288,6 +305,53 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         BoardCollaborators updatedCollaborator = boardCollaboratorsRepository.save(collaborator);
         return mapToCollaboratorResponse(updatedCollaborator);
     }
+
+    @Override
+    public CollaboratorResponse updatePendingInvitationAccessRight(String boardId, String collabOid, String accessRight, String requesterOid) {
+        // Validate board and requester authorization
+        getBoardAndCheckOwnership(boardId, requesterOid);
+
+        // Validate accessRight input
+        if (accessRight == null || accessRight.isEmpty()) {
+            throw new InvalidBoardFieldException("Access right is required", null);
+        }
+
+        BoardCollaborators.AccessRight newAccessRight;
+        try {
+            newAccessRight = BoardCollaborators.AccessRight.valueOf(accessRight.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidBoardFieldException("Invalid access right. Must be READ or WRITE", null);
+        }
+
+        // Construct the key for pending invitation
+        String key = boardId + "-" + collabOid;
+
+        // Check if the pending invitation exists
+        if (!tempAccessRights.containsKey(key)) {
+            throw new ItemNotFoundException("Assigned access right not found");
+        }
+
+        // Update the assigned access right in the in-memory map
+        tempAccessRights.put(key, newAccessRight);
+
+        // Save the updated map to the JSON file
+        saveTempAccessRightsToFile();
+
+        // Fetch pending collaborator details (simulate database-like response)
+        BoardCollaborators pendingCollaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
+                .orElseThrow(() -> new ItemNotFoundException("Pending collaborator not found"));
+
+        // Build and return the response
+        return CollaboratorResponse.builder()
+                .oid(pendingCollaborator.getUser().getOid())
+                .name(pendingCollaborator.getUser().getName())
+                .email(pendingCollaborator.getUser().getEmail())
+                .accessRight(pendingCollaborator.getAccessRight().name()) // Current state is still PENDING
+                .assignedAccessRight(newAccessRight.name()) // Updated assigned access right
+                .addedOn(pendingCollaborator.getAddedOn())
+                .build();
+    }
+
 
     @Override
     public void removeCollaborator(String boardId, String collabOid, String requesterOid) {
@@ -327,6 +391,7 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         message.setText(body);
         javaMailSender.send(message);
     }
+
     private void getBoardAndCheckOwnership(String boardId, String requesterOid) {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Board not found"));
