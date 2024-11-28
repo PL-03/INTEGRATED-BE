@@ -165,7 +165,12 @@ public class FileStorageServiceImpl implements FileStorageService {
                 .map(FileStorage::getName)
                 .collect(Collectors.toSet());
 
-        deleteFilesByNames(fileNames, task);
+        try {
+            deleteFilesByNames(fileNames, task);
+        } catch (RuntimeException e) {
+            // Log error but allow the task deletion to continue
+            System.err.println("Error deleting files for task ID: " + task.getId() + ". Error: " + e.getMessage());
+        }
     }
 
 

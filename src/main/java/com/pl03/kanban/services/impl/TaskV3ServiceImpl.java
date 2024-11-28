@@ -144,11 +144,15 @@ public class TaskV3ServiceImpl implements TaskV3Service {
     }
 
     @Override
+    @Transactional(transactionManager = "kanbanTransactionManager")
     public AddEditTaskDto deleteTaskById(String boardId, int taskId, String userId) {
         BoardServiceImpl.validateBoardAccessAndOwnerShip(boardId, userId, boardRepository, boardCollaboratorsRepository);
 
         TaskV3 task = taskV3Repository.findByIdAndBoardId(taskId, boardId)
                 .orElseThrow(() -> new ItemNotFoundException("Task with id " + taskId + " does not exist in board id: " + boardId));
+
+        fileStorageServiceImpl.deleteAllFiles(task);
+
         taskV3Repository.delete(task);
         return modelMapper.map(task, AddEditTaskDto.class);
     }
