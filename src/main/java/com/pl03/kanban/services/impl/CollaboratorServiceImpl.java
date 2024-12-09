@@ -87,7 +87,21 @@ public class CollaboratorServiceImpl implements CollaboratorService {
 
     @Override
     public CollaboratorResponse getBoardCollaboratorByOid(String boardId, String collabOid, String requesterOid) {
-        getBoardAndCheckAccess(boardId, requesterOid, boardRepository, boardCollaboratorsRepository);
+
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
+
+        boolean isCollaborator = requesterOid != null &&
+                boardCollaboratorsRepository.existsByBoardIdAndUserOid(
+                        board.getId(),
+                        requesterOid
+                ); //check for collaborator (allow pending because the invitation link)
+
+        if (!isCollaborator) {
+            throw new UnauthorizedAccessException("Access to this private board is restricted", null);
+        }
+
+//        getBoardAndCheckAccess(boardId, requesterOid, boardRepository, boardCollaboratorsRepository);
 
         BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
                 .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
