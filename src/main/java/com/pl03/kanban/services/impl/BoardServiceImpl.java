@@ -117,9 +117,9 @@ public class BoardServiceImpl implements BoardService {
                         board.getVisibility() == Board.Visibility.PUBLIC || // Include public boards
                                 (requesterOid != null && (
                                         board.getUser().getOid().equals(requesterOid) || // Include boards owned by the requester
-                                                boardCollaboratorsRepository.existsByBoardIdAndUserOidAndAccessRightNot(
-                                                        board.getId(), requesterOid, BoardCollaborators.AccessRight.PENDING)
-                                )) // Include boards where the requester is a valid collaborator
+                                                boardCollaboratorsRepository.existsByBoardIdAndUserOid(
+                                                        board.getId(), requesterOid)
+                                )) // Include boards where the requester is also PENDING collab
                 )
                 .map(board -> createBoardResponse(board, board.getUser().getName())) // Map to response
                 .collect(Collectors.toList()); // Collect to list
