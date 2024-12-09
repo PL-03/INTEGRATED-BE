@@ -95,11 +95,10 @@ public class BoardServiceImpl implements BoardService {
         boolean isPublic = board.getVisibility() == Board.Visibility.PUBLIC;
         boolean isOwner = requesterOid != null && board.getUser().getOid().equals(requesterOid);
         boolean isCollaborator = requesterOid != null &&
-                boardCollaboratorsRepository.existsByBoardIdAndUserOidAndAccessRightNot(
+                boardCollaboratorsRepository.existsByBoardIdAndUserOid(
                         board.getId(),
-                        requesterOid,
-                        BoardCollaborators.AccessRight.PENDING
-                ); //check for collaborator(access level != PENDING)
+                        requesterOid
+                ); //check for collaborator (allow pending because the invitation link)
 
         // If the board is public, the requester is the owner, or the requester is a collaborator, return the board
         if (isPublic || isOwner || isCollaborator) {

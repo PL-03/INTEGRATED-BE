@@ -45,7 +45,7 @@ public class CollaboratorServiceImpl implements CollaboratorService {
     private static final String TEMP_ACCESS_RIGHTS_FILE = "tempAccessRights.json";
 
     static {
-        loadTempAccessRightsFromFile();
+        loadTempAccessRightsFromFile(); // initialize when restart
     }
 
     private final UserRepository userRepository;
