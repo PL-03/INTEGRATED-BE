@@ -1,18 +1,21 @@
 package com.pl03.kanban.kanban_entities;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
-@Table(name = "taskv2", schema = "kanban_entities")
+@Table(name = "taskv3", schema = "kanban_entities")
 @AllArgsConstructor
 @NoArgsConstructor
-public class TaskV2 {
+public class TaskV3 {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,7 +32,7 @@ public class TaskV2 {
 
     @ManyToOne
     @JoinColumn(name = "taskStatusId", referencedColumnName = "statusId", nullable = false)
-    private Status status;
+    private StatusV3 statusV3;
 
     @Column(nullable = false, updatable = false, insertable = false)
     private Timestamp createdOn;
@@ -37,10 +40,11 @@ public class TaskV2 {
     @Column(nullable = false, updatable = false, insertable = false)
     private Timestamp updatedOn;
 
-    public TaskV2(String title, String description, String assignees) {
-        this.title = title;
-        this.description = description;
-        this.assignees = assignees;
-        this.status = new Status(1, "No Status", null); // Set default status
-    }
+    @NotNull
+    @ManyToOne
+    @JoinColumn(name = "boardId", nullable = false)
+    private Board board;
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FileStorage> files = new ArrayList<>();
 }

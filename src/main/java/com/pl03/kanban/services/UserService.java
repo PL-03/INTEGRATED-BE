@@ -5,5 +5,6 @@ import org.springframework.http.ResponseEntity;
 
 public interface UserService {
     ResponseEntity<?> login(UserDto loginRequest);
+    ResponseEntity<?> refreshToken(String refreshToken);
 }
 

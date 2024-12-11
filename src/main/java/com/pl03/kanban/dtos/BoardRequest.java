@@ -9,10 +9,6 @@ import lombok.experimental.FieldNameConstants;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldNameConstants
-public class GetAllTaskDto {
-    private int id;
-    private String title;
-    private String assignees;
-    private String status;
-    private String boardId;
+public class BoardRequest {
+    private String name;
 }

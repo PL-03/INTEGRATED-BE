@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Task Attachments ###
+/task-attachments/
+/tempAccessRights.json
