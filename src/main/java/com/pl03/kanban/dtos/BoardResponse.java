@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 @Data
@@ -37,5 +38,7 @@ public class BoardResponse {
         private String name;
         private String email;
         private BoardCollaborators.AccessRight accessRight;
+        private BoardCollaborators.AccessRight assignedAccessRight; // Assigned right during invitation
+        private Timestamp addedOn; // Date the collaborator was added
     }
 }

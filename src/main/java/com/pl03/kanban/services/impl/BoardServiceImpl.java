@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.pl03.kanban.services.impl.CollaboratorServiceImpl.tempAccessRights;
+
 @Service
 public class BoardServiceImpl implements BoardService {
 
@@ -204,12 +206,26 @@ public class BoardServiceImpl implements BoardService {
         List<BoardResponse.CollaboratorResponse> collaborators;
         if (board.getCollaborators() != null) {
             collaborators = board.getCollaborators().stream()
-                    .map(collab -> new BoardResponse.CollaboratorResponse(
-                            collab.getUser().getOid(),
-                            collab.getName(),
-                            collab.getEmail(),
-                            collab.getAccessRight()
-                    ))
+                    .map(collab -> {
+                        // Construct the key for tempAccessRights
+                        String tempAccessKey = board.getId() + "-" + collab.getUser().getOid();
+
+                        // Determine assignedAccessRight
+                        BoardCollaborators.AccessRight assignedRight = null;
+                        if (collab.getAccessRight() == BoardCollaborators.AccessRight.PENDING) {
+                            assignedRight = tempAccessRights.get(tempAccessKey);
+                        }
+
+                        // Create the collaborator response
+                        return new BoardResponse.CollaboratorResponse(
+                                collab.getUser().getOid(),
+                                collab.getName(),
+                                collab.getEmail(),
+                                collab.getAccessRight(), // This will be PENDING
+                                assignedRight, //  from tempAccessRights if exists
+                                collab.getAddedOn()
+                        );
+                    })
                     .collect(Collectors.toList());
         } else {
             collaborators = new ArrayList<>(); // Empty list if there are no collaborators

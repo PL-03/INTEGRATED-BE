@@ -41,7 +41,7 @@ public class CollaboratorServiceImpl implements CollaboratorService {
     private final JavaMailSender javaMailSender;
 
     // This map stores the access right temporarily before it's accepted
-    private static Map<String, BoardCollaborators.AccessRight> tempAccessRights = new HashMap<>(); // for accept invitation
+    public static Map<String, BoardCollaborators.AccessRight> tempAccessRights = new HashMap<>(); // for accept invitation
     private static final String TEMP_ACCESS_RIGHTS_FILE = "tempAccessRights.json";
 
     static {
@@ -64,24 +64,37 @@ public class CollaboratorServiceImpl implements CollaboratorService {
 
     @Override
     public List<CollaboratorResponse> getBoardCollaborators(String boardId, String requesterOid) {
-        getBoardAndCheckAccess(boardId, requesterOid, boardRepository, boardCollaboratorsRepository);
+//        getBoardAndCheckAccess(boardId, requesterOid, boardRepository, boardCollaboratorsRepository);
 
-        List<BoardCollaborators> collaborators = boardCollaboratorsRepository.findByBoardId(boardId);
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ItemNotFoundException("Board with id " + boardId + " does not exist"));
 
-        return collaborators.stream()
-                .map(collaborator -> {
-                    String tempAssignedRight = String.valueOf(tempAccessRights.getOrDefault(
-                            boardId + "-" + collaborator.getUser().getOid(), null));
-                    return CollaboratorResponse.builder()
-                            .oid(collaborator.getUser().getOid())
-                            .name(collaborator.getName())
-                            .email(collaborator.getEmail())
-                            .accessRight(collaborator.getAccessRight().name())
-                            .assignedAccessRight(tempAssignedRight != null ? tempAssignedRight : null)
-                            .addedOn(collaborator.getAddedOn())
-                            .build();
-                })
-                .collect(Collectors.toList());
+        boolean isCollaborator = requesterOid != null &&
+                boardCollaboratorsRepository.existsByBoardIdAndUserOid(
+                        board.getId(),
+                        requesterOid
+                ); //check for collaborator (allow pending because the invitation link)
+        boolean isOwner = requesterOid != null && board.getUser().getOid().equals(requesterOid);
+        boolean isPublic = board.getVisibility() == Board.Visibility.PUBLIC;
+        if (isCollaborator || isOwner || isPublic) {
+            List<BoardCollaborators> collaborators = boardCollaboratorsRepository.findByBoardId(boardId);
+
+            return collaborators.stream()
+                    .map(collaborator -> {
+                        String tempAssignedRight = String.valueOf(tempAccessRights.getOrDefault(
+                                boardId + "-" + collaborator.getUser().getOid(), null));
+                        return CollaboratorResponse.builder()
+                                .oid(collaborator.getUser().getOid())
+                                .name(collaborator.getName())
+                                .email(collaborator.getEmail())
+                                .accessRight(collaborator.getAccessRight().name())
+                                .assignedAccessRight(tempAssignedRight != null ? tempAssignedRight : null)
+                                .addedOn(collaborator.getAddedOn())
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+        }
+        throw new UnauthorizedAccessException("Access to this private board is restricted", null);
     }
 
 
@@ -96,27 +109,29 @@ public class CollaboratorServiceImpl implements CollaboratorService {
                         board.getId(),
                         requesterOid
                 ); //check for collaborator (allow pending because the invitation link)
+        boolean isPublic = board.getVisibility() == Board.Visibility.PUBLIC;
+        boolean isOwner = requesterOid != null && board.getUser().getOid().equals(requesterOid);
 
-        if (!isCollaborator) {
-            throw new UnauthorizedAccessException("Access to this private board is restricted", null);
+        if (isCollaborator || isOwner || isPublic) {
+            BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
+                    .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
+
+            String tempAssignedRight = String.valueOf(tempAccessRights.getOrDefault(
+                    boardId + "-" + collaborator.getUser().getOid(), null));
+
+            return CollaboratorResponse.builder()
+                    .oid(collaborator.getUser().getOid())
+                    .name(collaborator.getName())
+                    .email(collaborator.getEmail())
+                    .accessRight(collaborator.getAccessRight().name())
+                    .assignedAccessRight(tempAssignedRight != null ? tempAssignedRight : null)
+                    .addedOn(collaborator.getAddedOn())
+                    .build();
+
         }
 
 //        getBoardAndCheckAccess(boardId, requesterOid, boardRepository, boardCollaboratorsRepository);
-
-        BoardCollaborators collaborator = boardCollaboratorsRepository.findByBoardIdAndUserOid(boardId, collabOid)
-                .orElseThrow(() -> new ItemNotFoundException("Collaborator not found"));
-
-        String tempAssignedRight = String.valueOf(tempAccessRights.getOrDefault(
-                boardId + "-" + collaborator.getUser().getOid(), null));
-
-        return CollaboratorResponse.builder()
-                .oid(collaborator.getUser().getOid())
-                .name(collaborator.getName())
-                .email(collaborator.getEmail())
-                .accessRight(collaborator.getAccessRight().name())
-                .assignedAccessRight(tempAssignedRight != null ? tempAssignedRight : null)
-                .addedOn(collaborator.getAddedOn())
-                .build();
+        throw new UnauthorizedAccessException("Access to this private board is restricted", null);
     }
 
 
@@ -413,6 +428,10 @@ public class CollaboratorServiceImpl implements CollaboratorService {
         if (!board.getUser().getOid().equals(requesterOid)) {
             throw new UnauthorizedAccessException("Only the board owner can perform this action", null);
         }
+    }
+
+    public static BoardCollaborators.AccessRight getAssignedAccessRight(String key) {
+        return tempAccessRights.get(key);
     }
 
     private CollaboratorResponse mapToCollaboratorResponse(BoardCollaborators collaborator) {
